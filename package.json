@@ -1,0 +1,63 @@
+{
+  "name": "t4g-urban-loyalty-game",
+  "version": "1.0.0",
+  "description": "T4G - Urban Social Gamification Loyalty Platform",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run start:dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "start": "npm run start:server",
+    "start:server": "cd server && npm run start:prod",
+    "start:client": "cd client && npm run preview",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "cd server && npm run test",
+    "test:client": "cd client && npm run test",
+    "lint": "npm run lint:server && npm run lint:client",
+    "lint:server": "cd server && npm run lint",
+    "lint:client": "cd client && npm run lint",
+    "clean": "npm run clean:server && npm run clean:client",
+    "clean:server": "cd server && rm -rf dist node_modules",
+    "clean:client": "cd client && rm -rf dist node_modules",
+    "install:all": "npm install && npm run install:server && npm run install:client",
+    "install:server": "cd server && npm install",
+    "install:client": "cd client && npm install",
+    "db:migrate": "cd server && npm run migration:run",
+    "db:generate": "cd server && npm run migration:generate",
+    "db:revert": "cd server && npm run migration:revert",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up",
+    "docker:build": "docker-compose build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "author": "00WhengWheng",
+  "license": "MIT License",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/00WhengWheng/T4G-Urban-Loyalty-Game"
+  },
+  "keywords": [
+    "gamification",
+    "loyalty",
+    "social",
+    "urban",
+    "nfc",
+    "rewards",
+    "challenges"
+  ]
+}

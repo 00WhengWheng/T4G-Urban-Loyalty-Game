@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # NestJS Backend (Production)
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.prod
+    container_name: t4g-server-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+    ports:
+      - "3001:3001"
+    networks:
+      - t4g-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.t4g-api.rule=Host(`api.t4g-game.com`)"
+      - "traefik.http.routers.t4g-api.tls=true"
+      - "traefik.http.routers.t4g-api.tls.certresolver=letsencrypt"
+
+  # React Frontend (Production)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.prod
+    container_name: t4g-client-prod
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+      VITE_APP_NAME: ${VITE_APP_NAME}
+    networks:
+      - t4g-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.t4g-app.rule=Host(`app.t4g-game.com`)"
+      - "traefik.http.routers.t4g-app.tls=true"
+      - "traefik.http.routers.t4g-app.tls.certresolver=letsencrypt"
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: t4g-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - client_static:/usr/share/nginx/html
+    networks:
+      - t4g-network
+    depends_on:
+      - server
+      - client
+
+  # Traefik Load Balancer (Alternative to Nginx)
+  traefik:
+    image: traefik:v3.0
+    container_name: t4g-traefik-prod
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@t4g-game.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - t4g-network
+    # Uncomment to use Traefik instead of Nginx
+    # profiles:
+    #   - traefik
+
+volumes:
+  client_static:
+    driver: local
+  traefik_letsencrypt:
+    driver: local
+
+networks:
+  t4g-network:
+    driver: bridge
+
+# Production secrets (use Docker secrets in production)
+secrets:
+  jwt_secret:
+    external: true
+  database_url:
+    external: true
