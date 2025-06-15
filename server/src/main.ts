@@ -6,10 +6,33 @@ import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 import * as compression from 'compression';
 import helmet from 'helmet';
+import * as morgan from 'morgan';
+import * as responseTime from 'response-time';
+import * as winston from 'winston';
+import { WinstonModule } from 'nest-winston';
+import * as promClient from 'prom-client';
+import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    logger: WinstonModule.createLogger({
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json(),
+          ),
+        }),
+      ],
+    }),
+  });
+
+  // Prometheus metrics
+  const collectDefaultMetrics = promClient.collectDefaultMetrics;
+  collectDefaultMetrics();
+  app.use('/metrics', async (req, res) => {
+    res.set('Content-Type', promClient.register.contentType);
+    res.end(await promClient.register.metrics());
   });
 
   // Get configuration service
@@ -36,6 +59,12 @@ async function bootstrap() {
 
   // Cookie parser
   app.use(cookieParser(configService.get<string>('COOKIE_SECRET')));
+
+  // Logging middleware
+  app.use(morgan('combined'));
+
+  // Response time monitoring
+  app.use(responseTime());
 
   // API versioning
   app.enableVersioning({
@@ -84,6 +113,9 @@ async function bootstrap() {
       disableErrorMessages: nodeEnv === 'production',
     }),
   );
+
+  // Error handling filter
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Swagger Documentation (only in development)
   if (nodeEnv === 'development' && configService.get<boolean>('ENABLE_SWAGGER')) {

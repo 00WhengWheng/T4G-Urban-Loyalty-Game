@@ -6,17 +6,17 @@ import { join } from 'path';
 config();
 
 // Entities
-import { User } from './users/entities/user.entity/user.entity';
-import { Tenant } from './tenants/entities/tenant.entity/tenant.entity';
-import { Challenge } from './challenges/entities/challenge.entity/challenge.entity';
-import { ChallengeParticipant } from './challenges/entities/challenge.entity/challenge-participant.entity';
-import { NfcTag } from './nfcs/entities/nfc.entity/nfc-tag.entity';
-import { NfcScan } from './nfcs/entities/nfc.entity/nfc-scan.entity';
-import { Token } from './tokens/entities/token.entity/token.entity';
-import { TokenClaim } from './tokens/entities/token.entity/token-claim.entity';
-import { Game } from './games/entities/game.entity/game.entity';
-import { GameAttempt } from './games/entities/game.entity/game-attempt.entity';
-import { Share } from './shares/entities/share.entity/share.entity';
+import { User } from './users/user.entity';
+import { Tenant } from './tenants/tenant.entity';
+import { Challenge } from './challenges/challenge.entity';
+import { ChallengeParticipant } from './challenges/challenge-participant.entity';
+import { NfcTag } from './nfcs/nfc-tag.entity';
+import { NfcScan } from './nfcs/nfc-scan.entity';
+import { Token } from './tokens/token.entity';
+import { TokenClaim } from './tokens/token-claim.entity';
+import { Game } from './games/game.entity';
+import { GameAttempt } from './games/game-attempt.entity';
+import { Share } from './shares/share.entity';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isDevelopment = process.env.NODE_ENV === 'development';

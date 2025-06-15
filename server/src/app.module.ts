@@ -32,8 +32,8 @@ import { NfcTag } from './nfcs/nfc-tag.entity';
 import { NfcScan } from './nfcs/nfc-scan.entity';
 import { Token } from './tokens/token.entity';
 import { TokenClaim } from './tokens/token-claim.entity';
-import { Game } from './games/entities/game.entity/game.entity';
-import { GameAttempt } from './games/entities/game.entity/game-attempt.entity';
+import { Game } from './games/game.entity';
+import { GameAttempt } from './games/game-attempt.entity';
 import { Share } from './shares/share.entity';
 
 // Configuration validation schema
