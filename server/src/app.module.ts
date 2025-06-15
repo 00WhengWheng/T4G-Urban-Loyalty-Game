@@ -21,19 +21,20 @@ import { GamesModule } from './games/games.module';
 import { NfcsModule } from './nfcs/nfcs.module';
 import { TokensModule } from './tokens/tokens.module';
 import { SharesModule } from './shares/shares.module';
+import { ScoringModule } from './scoring/scoring.module';
 
 // Entities
 import { User } from './users/user.entity';
 import { Tenant } from './tenants/tenant.entity';
 import { Challenge } from './challenges/challenge.entity';
 import { ChallengeParticipant } from './challenges/challenge-participant.entity';
-import { NfcTag } from './nfcs/entities/nfc.entity/nfc-tag.entity';
-import { NfcScan } from './nfcs/entities/nfc.entity/nfc-scan.entity';
-import { Token } from './tokens/entities/token.entity/token.entity';
-import { TokenClaim } from './tokens/entities/token.entity/token-claim.entity';
+import { NfcTag } from './nfcs/nfc-tag.entity';
+import { NfcScan } from './nfcs/nfc-scan.entity';
+import { Token } from './tokens/token.entity';
+import { TokenClaim } from './tokens/token-claim.entity';
 import { Game } from './games/entities/game.entity/game.entity';
 import { GameAttempt } from './games/entities/game.entity/game-attempt.entity';
-import { Share } from './shares/entities/share.entity/share.entity';
+import { Share } from './shares/share.entity';
 
 // Configuration validation schema
 import * as Joi from 'joi';
@@ -158,6 +159,7 @@ const configValidationSchema = Joi.object({
     NfcsModule,
     TokensModule,
     SharesModule,
+    ScoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],
