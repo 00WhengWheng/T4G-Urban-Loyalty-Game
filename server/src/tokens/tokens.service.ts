@@ -1,45 +1,59 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
 import { Token } from './token.entity';
 
 @Injectable()
 export class TokensService {
-  private tokens: Token[] = [];
+  constructor(
+    @InjectRepository(Token)
+    private readonly tokenRepository: Repository<Token>,
+  ) {}
 
-  create(createTokenDto: CreateTokenDto): Token {
-    const newToken: Token = {
-      id: (Date.now()).toString(),
+  async create(createTokenDto: CreateTokenDto): Promise<Token> {
+    const newToken = this.tokenRepository.create({
       ...createTokenDto,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-    this.tokens.push(newToken);
-    return newToken;
+      tenant_id: 'default-tenant-id', // Valore predefinito o da configurare dinamicamente
+      token_name: 'Default Token Name', // Valore predefinito
+      token_description: undefined, // Campo opzionale
+    });
+    return this.tokenRepository.save(newToken);
   }
 
-  findAll(): Token[] {
-    return this.tokens;
+  async findAll(): Promise<Token[]> {
+    return this.tokenRepository.find();
   }
 
-  findOne(id: string): Token | undefined {
-    return this.tokens.find(token => token.id === id);
+  async findOne(id: string): Promise<Token> {
+    const token = await this.tokenRepository.findOne({ where: { id } });
+    if (!token) {
+      throw new NotFoundException('Token not found');
+    }
+    return token;
   }
 
-  update(id: string, updateTokenDto: UpdateTokenDto): Token | null {
-    const tokenIndex = this.tokens.findIndex(token => token.id === id);
-    if (tokenIndex === -1) return null;
-    this.tokens[tokenIndex] = {
-      ...this.tokens[tokenIndex],
-      ...updateTokenDto,
-      updated_at: new Date(),
-    };
-    return this.tokens[tokenIndex];
+  async update(id: string, updateTokenDto: UpdateTokenDto): Promise<Token> {
+    const token = await this.findOne(id);
+    Object.assign(token, updateTokenDto);
+    return this.tokenRepository.save(token);
   }
 
-  remove(id: string): Token | null {
-    const tokenIndex = this.tokens.findIndex(token => token.id === id);
-    if (tokenIndex === -1) return null;
-    return this.tokens.splice(tokenIndex, 1)[0];
+  async remove(id: string): Promise<void> {
+    const token = await this.findOne(id);
+    await this.tokenRepository.remove(token);
   }
+
+  async getAvailableTokens(): Promise<Token[]> {
+    return this.tokenRepository.find({ where: { is_active: true }, order: { created_at: 'DESC' } });
+  }
+
+  async deactivateToken(id: string): Promise<Token> {
+    const token = await this.findOne(id);
+    token.is_active = false;
+    return this.tokenRepository.save(token);
+  }
+
+  // Additional methods for claims and tenant-specific logic can be added here.
 }

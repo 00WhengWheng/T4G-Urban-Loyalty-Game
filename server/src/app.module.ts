@@ -23,10 +23,10 @@ import { TokensModule } from './tokens/tokens.module';
 import { SharesModule } from './shares/shares.module';
 
 // Entities
-import { User } from './users/entities/user.entity/user.entity';
-import { Tenant } from './tenants/entities/tenant.entity/tenant.entity';
-import { Challenge } from './challenges/entities/challenge.entity/challenge.entity';
-import { ChallengeParticipant } from './challenges/entities/challenge.entity/challenge-participant.entity';
+import { User } from './users/user.entity';
+import { Tenant } from './tenants/tenant.entity';
+import { Challenge } from './challenges/challenge.entity';
+import { ChallengeParticipant } from './challenges/challenge-participant.entity';
 import { NfcTag } from './nfcs/entities/nfc.entity/nfc-tag.entity';
 import { NfcScan } from './nfcs/entities/nfc.entity/nfc-scan.entity';
 import { Token } from './tokens/entities/token.entity/token.entity';
