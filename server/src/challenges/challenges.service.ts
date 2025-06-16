@@ -10,7 +10,8 @@ export class ChallengesService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @InjectRepository(ChallengeParticipant)
+    
+    @InjectRepository(ChallengeParticipant) // ✅ VERIFICA CHE SIA PRESENTE
     private participantRepository: Repository<ChallengeParticipant>,
   ) {}
 

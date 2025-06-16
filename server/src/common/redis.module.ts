@@ -3,84 +3,6 @@ import { RedisModule as IoRedisModule } from '@nestjs-modules/ioredis';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
-@Global()
-@Module({
-  imports: [
-    IoRedisModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const redisConfig = {
-          type: 'single' as const,
-          options: {
-            host: configService.get('REDIS_HOST', 'localhost'),
-            port: configService.get<number>('REDIS_PORT', 6379),
-            password: configService.get('REDIS_PASSWORD'),
-            db: configService.get<number>('REDIS_DB', 0),
-            retryDelayOnFailover: 100,
-            maxRetriesPerRequest: 3,
-            lazyConnect: true,
-            keepAlive: 30000,
-            family: 4,
-            keyPrefix: 't4g:',
-            
-            // Connection pool settings
-            maxLoadingTimeout: 10000,
-            
-            // Retry settings
-            retryStrategy: (times: number) => {
-              if (times > 5) {
-                console.error('❌ Redis connection failed after 5 retries');
-                return null;
-              }
-              return Math.min(times * 50, 2000);
-            },
-            
-            // Connection events
-            onConnect: () => {
-              console.log('🔄 Redis connecting...');
-            },
-            
-            onReady: () => {
-              console.log('✅ Redis connection established');
-            },
-            
-            onError: (error: Error) => {
-              console.error('❌ Redis connection error:', error.message);
-            },
-            
-            onClose: () => {
-              console.log('🔄 Redis connection closed');
-            },
-            
-            onReconnecting: () => {
-              console.log('🔄 Redis reconnecting...');
-            },
-          },
-        };
-
-        return redisConfig;
-      },
-      inject: [ConfigService],
-    }),
-  ],
-  exports: [IoRedisModule],
-})
-export class RedisModule implements OnModuleInit, OnModuleDestroy {
-  constructor(
-    private readonly configService: ConfigService,
-  ) {}
-
-  async onModuleInit() {
-    // Additional Redis setup if needed
-    console.log('🔧 Redis module initialized');
-  }
-
-  async onModuleDestroy() {
-    // Cleanup Redis connections
-    console.log('🔧 Redis module destroyed');
-  }
-}
-
 // Redis Service for custom operations
 import { Injectable, Inject } from '@nestjs/common';
 
@@ -234,5 +156,84 @@ export class RedisService {
       console.error(`Redis DELETE PATTERN error for pattern ${pattern}:`, error);
       return 0;
     }
+  }
+}
+
+@Global()
+@Module({
+  imports: [
+    IoRedisModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        const redisConfig = {
+          type: 'single' as const,
+          options: {
+            host: configService.get('REDIS_HOST', 'localhost'),
+            port: configService.get<number>('REDIS_PORT', 6379),
+            password: configService.get('REDIS_PASSWORD'),
+            db: configService.get<number>('REDIS_DB', 0),
+            retryDelayOnFailover: 100,
+            maxRetriesPerRequest: 3,
+            lazyConnect: true,
+            keepAlive: 30000,
+            family: 4,
+            keyPrefix: 't4g:',
+            
+            // Connection pool settings
+            maxLoadingTimeout: 10000,
+            
+            // Retry settings
+            retryStrategy: (times: number) => {
+              if (times > 5) {
+                console.error('❌ Redis connection failed after 5 retries');
+                return null;
+              }
+              return Math.min(times * 50, 2000);
+            },
+            
+            // Connection events
+            onConnect: () => {
+              console.log('🔄 Redis connecting...');
+            },
+            
+            onReady: () => {
+              console.log('✅ Redis connection established');
+            },
+            
+            onError: (error: Error) => {
+              console.error('❌ Redis connection error:', error.message);
+            },
+            
+            onClose: () => {
+              console.log('🔄 Redis connection closed');
+            },
+            
+            onReconnecting: () => {
+              console.log('🔄 Redis reconnecting...');
+            },
+          },
+        };
+
+        return redisConfig;
+      },
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [RedisService],
+  exports: [IoRedisModule, RedisService],
+})
+export class RedisModule implements OnModuleInit, OnModuleDestroy {
+  constructor(
+    private readonly configService: ConfigService,
+  ) {}
+
+  async onModuleInit() {
+    // Additional Redis setup if needed
+    console.log('🔧 Redis module initialized');
+  }
+
+  async onModuleDestroy() {
+    // Cleanup Redis connections
+    console.log('🔧 Redis module destroyed');
   }
 }
