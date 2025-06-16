@@ -1,235 +1,187 @@
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ForbiddenException, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual } from 'typeorm';
-import { InjectRedis } from '@nestjs-modules/ioredis';
-import Redis from 'ioredis';
-import { NfcTag } from './nfc-tag.entity';
-import { NfcScan } from './nfc-scan.entity';
-import { UsersService } from '../users/users.service';
-import { CreateNfcScanDto } from './dto/create-nfc-scan.dto';
-import { CreateNfcTagDto } from './dto/create-nfc-tag.dto';
+import { Repository } from 'typeorm';
+import { Redis } from 'ioredis';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { NfcScan } from '../nfcs/nfc-scan.entity';
+import { NfcTag } from '../nfcs/nfc-tag.entity';
+import { NFCDetection } from '../entities/nfc-detection.entity';
+import { User } from '../users/user.entity';
+import { Tenant } from '../tenants/tenant.entity';
+import { ScoringService } from '../scoring/scoring.service';
 
 @Injectable()
-export class NfcService {
-  constructor(
-    @InjectRepository(NfcTag)
-    private nfcTagRepository: Repository<NfcTag>,
-    @InjectRepository(NfcScan)
-    private nfcScanRepository: Repository<NfcScan>,
-    private usersService: UsersService,
-    @InjectRedis() private readonly redis: Redis,
-  ) { }
+export class NFCsService {
+ private readonly logger = new Logger(NFCsService.name);
 
-  // NFC SCAN LOGIC
-  async scanNfcTag(userId: string, createScanDto: CreateNfcScanDto) {
-    // 1. Trova il tag NFC
-    const nfcTag = await this.nfcTagRepository.findOne({
-      where: { tag_identifier: createScanDto.tag_identifier },
-      relations: ['tenant'],
-    });
+ constructor(
+   @InjectRepository(NfcScan) private nfcRepository: Repository<NfcScan>,
+   @InjectRepository(NfcTag) private nfcTagRepository: Repository<NfcTag>,
+   @InjectRepository(NFCDetection) private nfcDetectionRepository: Repository<NFCDetection>,
+   @InjectRepository(User) private userRepository: Repository<User>,
+   @InjectRepository(Tenant) private tenantRepository: Repository<Tenant>,
+   @Inject('REDIS_SERVICE') private redis: Redis,
+   private scoringService: ScoringService,
+   private eventEmitter: EventEmitter2,
+ ) {}
 
-    if (!nfcTag || !nfcTag.is_active) {
-      throw new NotFoundException('NFC Tag not found or inactive');
-    }
+ async createNFC(tenantId: string, createNFCDto: any): Promise<NFC> {
+   const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
+   if (!tenant) throw new NotFoundException('Tenant not found');
 
-    // 2. Rate Limiting con Redis
-    const rateLimitKey = `nfc:scan:${userId}:${nfcTag.id}`;
-    const scanCount = await this.redis.get(rateLimitKey);
+   const nfc = this.nfcRepository.create({
+     ...createNFCDto,
+     tenant,
+     status: 'active',
+   });
 
-    if (scanCount && parseInt(scanCount) >= nfcTag.max_scans_per_user_per_day) {
-      throw new ForbiddenException('Daily scan limit exceeded for this tag');
-    }
+   return await this.nfcRepository.save(nfc);
+ }
 
-    // 3. Validazione Geolocation (raggio 100m dal tenant)
-    const distance = this.calculateDistance(
-      createScanDto.user_latitude,
-      createScanDto.user_longitude,
-      nfcTag.tenant.latitude,
-      nfcTag.tenant.longitude
-    );
+ async scanNFC(userId: string, scanData: any): Promise<any> {
+   const { tag_id, latitude, longitude } = scanData;
 
-    if (distance > 0.1) { // 100 metri
-      throw new BadRequestException('You are too far from the location to scan this tag');
-    }
+   // Validazione coordinate
+   if (!this.isValidCoordinate(latitude, longitude)) {
+     throw new BadRequestException('Invalid coordinates');
+   }
 
-    // 4. Cooldown check (5 minuti tra scan dello stesso tag)
-    const cooldownKey = `nfc:cooldown:${userId}:${nfcTag.id}`;
-    const lastScan = await this.redis.get(cooldownKey);
+   // Rate limiting avanzato
+   await this.advancedRateLimit(userId, tag_id, scanData.ip_address);
 
-    if (lastScan) {
-      throw new ForbiddenException('Please wait before scanning this tag again');
-    }
+   // Trova NFC tag
+   const nfcTag = await this.nfcTagRepository.findOne({
+     where: { tag_id, status: 'active' },
+     relations: ['nfc', 'nfc.tenant'],
+   });
 
-    // 5. Crea scan record
-    const nfcScan = this.nfcScanRepository.create({
-      user_id: userId,
-      nfc_tag_id: nfcTag.id,
-      tenant_id: nfcTag.tenant_id,
-      points_earned: nfcTag.points_per_scan,
-      user_latitude: createScanDto.user_latitude,
-      user_longitude: createScanDto.user_longitude,
-      device_info: createScanDto.device_info,
-      ip_address: createScanDto.ip_address,
-    });
+   if (!nfcTag || nfcTag.nfc.status !== 'active') {
+     throw new NotFoundException('NFC not found or inactive');
+   }
 
-    const savedScan = await this.nfcScanRepository.save(nfcScan);
+   // Controllo distanza
+   const distance = this.calculateDistance(
+     latitude, longitude,
+     nfcTag.nfc.latitude, nfcTag.nfc.longitude
+   );
 
-    // 6. Aggiorna punti utente
-    const updatedUser = await this.usersService.updatePoints(userId, nfcTag.points_per_scan);
-    if (!updatedUser) {
-      throw new InternalServerErrorException('Failed to update user points');
-    }
+   if (distance > nfcTag.nfc.detection_radius) {
+     throw new ForbiddenException('Too far from NFC location');
+   }
 
-    // 7. Aggiorna Redis counters
-    await this.redis.incr(rateLimitKey);
-    await this.redis.expire(rateLimitKey, 86400); // 24 ore
-    await this.redis.set(cooldownKey, Date.now(), 'EX', 300); // 5 minuti
+   // Controllo cooldown
+   await this.checkCooldown(userId, tag_id);
 
-    // 8. Log per analytics
-    await this.logScanAnalytics(savedScan, nfcTag, distance);
+   // Registra detection
+   const detection = await this.createDetection(userId, nfcTag.nfc, scanData);
 
-    return {
-      success: true,
-      points_earned: nfcTag.points_per_scan,
-      scan_id: savedScan.id,
-      message: `You earned ${nfcTag.points_per_scan} points!`,
-    };
-  }
+   // Assegna punti
+   const points = nfcTag.nfc.points_awarded || 10;
+   await this.scoringService.awardPoints(userId, points, 'nfc_scan');
 
-  // TENANT NFC TAG MANAGEMENT
-  async createNfcTag(tenantId: string, createTagDto: CreateNfcTagDto) {
-    const nfcTag = this.nfcTagRepository.create({
-      ...createTagDto,
-      tenant_id: tenantId,
-    });
-    return this.nfcTagRepository.save(nfcTag);
-  }
+   // Imposta cooldown
+   await this.setCooldown(userId, tag_id);
 
-  async getTenantTags(tenantId: string) {
-    return this.nfcTagRepository.find({
-      where: { tenant_id: tenantId },
-      order: { created_at: 'DESC' },
-    });
-  }
+   // Emetti evento
+   this.eventEmitter.emit('nfc.scanned', {
+     userId, nfcId: nfcTag.nfc.id, points
+   });
 
-  async updateNfcTag(tagId: string, tenantId: string, updateData: any) {
-    const tag = await this.nfcTagRepository.findOne({
-      where: { id: tagId, tenant_id: tenantId },
-    });
+   return {
+     success: true,
+     points_awarded: points,
+     nfc: nfcTag.nfc,
+     detection_id: detection.id,
+   };
+ }
 
-    if (!tag) {
-      throw new NotFoundException('NFC Tag not found');
-    }
+ async getNFCsByTenant(tenantId: string, page: number = 1, limit: number = 20) {
+   const [nfcs, total] = await this.nfcRepository.findAndCount({
+     where: { tenant: { id: tenantId } },
+     relations: ['tenant'],
+     skip: (page - 1) * limit,
+     take: limit,
+     order: { created_at: 'DESC' },
+   });
 
-    Object.assign(tag, updateData);
-    return this.nfcTagRepository.save(tag);
-  }
+   return { nfcs, total, page, limit, totalPages: Math.ceil(total / limit) };
+ }
 
-  async deleteNfcTag(tagId: string, tenantId: string) {
-    const tag = await this.nfcTagRepository.findOne({
-      where: { id: tagId, tenant_id: tenantId },
-    });
+ private async advancedRateLimit(userId: string, tagId: string, ip: string): Promise<void> {
+   const userKey = `nfc:limit:user:${userId}`;
+   const tagKey = `nfc:limit:tag:${tagId}`;
+   const ipKey = `nfc:limit:ip:${ip}`;
 
-    if (!tag) {
-      throw new NotFoundException('NFC Tag not found');
-    }
+   const [userCount, tagCount, ipCount] = await Promise.all([
+     this.redis.get(userKey),
+     this.redis.get(tagKey),
+     this.redis.get(ipKey)
+   ]);
 
-    return this.nfcTagRepository.remove(tag);
-  }
+   if (parseInt(userCount || '0') >= 50) throw new ForbiddenException('User daily limit');
+   if (parseInt(tagCount || '0') >= 1000) throw new ForbiddenException('Tag overloaded');
+   if (parseInt(ipCount || '0') >= 200) throw new ForbiddenException('IP rate limit');
 
-  // ANALYTICS & REPORTING
-  async getTenantScanStats(tenantId: string, days: number = 30) {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+   await Promise.all([
+     this.redis.incr(userKey), this.redis.expire(userKey, 86400),
+     this.redis.incr(tagKey), this.redis.expire(tagKey, 86400),
+     this.redis.incr(ipKey), this.redis.expire(ipKey, 86400)
+   ]);
+ }
 
-    return this.nfcScanRepository
-      .createQueryBuilder('scan')
-      .select([
-        'DATE(scan.scan_timestamp) as date',
-        'COUNT(*) as total_scans',
-        'COUNT(DISTINCT scan.user_id) as unique_users',
-        'SUM(scan.points_earned) as total_points_awarded'
-      ])
-      .where('scan.tenant_id = :tenantId', { tenantId })
-      .andWhere('scan.scan_timestamp >= :startDate', { startDate })
-      .andWhere('scan.is_valid = true')
-      .groupBy('DATE(scan.scan_timestamp)')
-      .orderBy('date', 'DESC')
-      .getRawMany();
-  }
+ private async checkCooldown(userId: string, tagId: string): Promise<void> {
+   const cooldownKey = `nfc:cooldown:${userId}:${tagId}`;
+   const cooldown = await this.redis.get(cooldownKey);
 
-  async getUserScanHistory(userId: string, limit: number = 50) {
-    return this.nfcScanRepository.find({
-      where: { user_id: userId, is_valid: true },
-      relations: ['nfc_tag', 'tenant'],
-      order: { scan_timestamp: 'DESC' },
-      take: limit,
-    });
-  }
+   if (cooldown) {
+     const remaining = Math.ceil((parseInt(cooldown) - Date.now()) / 1000);
+     throw new ForbiddenException(`Cooldown active. ${remaining}s remaining`);
+   }
+ }
 
-  async getTagScanCount(tagId: string) {
-    return this.nfcScanRepository.count({
-      where: { nfc_tag_id: tagId, is_valid: true },
-    });
-  }
+ private async setCooldown(userId: string, tagId: string): Promise<void> {
+   const cooldownKey = `nfc:cooldown:${userId}:${tagId}`;
+   const duration = 300; // 5 minuti
+   await this.redis.setex(cooldownKey, duration, (Date.now() + duration * 1000).toString());
+ }
 
-  async getDailyScansByUser(userId: string, tagId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+ private async createDetection(userId: string, nfc: NFC, scanData: any): Promise<NFCDetection> {
+   const user = await this.userRepository.findOne({ where: { id: userId } });
+   if (!user) throw new NotFoundException('User not found');
 
-    return this.nfcScanRepository.count({
-      where: {
-        user_id: userId,
-        nfc_tag_id: tagId,
-        scan_timestamp: MoreThanOrEqual(today),
-        is_valid: true,
-      },
-    });
-  }
+   const detection = this.nfcDetectionRepository.create({
+     nfc, user,
+     latitude: scanData.latitude,
+     longitude: scanData.longitude,
+     distance: this.calculateDistance(
+       scanData.latitude, scanData.longitude,
+       nfc.latitude, nfc.longitude
+     ),
+     detected_at: new Date(),
+     ip_address: scanData.ip_address,
+     user_agent: scanData.user_agent,
+   });
 
-  // ADMIN FUNCTIONS
-  async invalidateScan(scanId: string, reason: string) {
-    const scan = await this.nfcScanRepository.findOne({
-      where: { id: scanId },
-    });
+   return await this.nfcDetectionRepository.save(detection);
+ }
 
-    if (!scan) {
-      throw new NotFoundException('Scan not found');
-    }
+ private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+   const R = 6371000;
+   const dLat = this.deg2rad(lat2 - lat1);
+   const dLon = this.deg2rad(lon2 - lon1);
+   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+             Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
+             Math.sin(dLon / 2) * Math.sin(dLon / 2);
+   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+   return R * c;
+ }
 
-    scan.is_valid = false;
-    await this.nfcScanRepository.save(scan);
+ private deg2rad(deg: number): number {
+   return deg * (Math.PI / 180);
+ }
 
-    // Sottrai punti all'utente
-    await this.usersService.updatePoints(scan.user_id, -scan.points_earned);
-
-    return { success: true, message: `Scan invalidated: ${reason}` };
-  }
-
-  // UTILITIES
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth radius in km
-    const dLat = this.deg2rad(lat2 - lat1);
-    const dLon = this.deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
-  }
-
-  private deg2rad(deg: number): number {
-    return deg * (Math.PI / 180);
-  }
-
-  private async logScanAnalytics(scan: NfcScan, tag: NfcTag, distance: number) {
-    console.log('Analytics Log:', {
-      scan_id: scan.id,
-      tag_id: tag.id,
-      distance,
-      points_earned: scan.points_earned,
-    });
-    // Additional analytics logic can be added here
-  }
+ private isValidCoordinate(lat: number, lng: number): boolean {
+   return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 &&
+          !isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng);
+ }
 }

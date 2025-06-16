@@ -85,7 +85,10 @@ const configValidationSchema = Joi.object({
         synchronize: configService.get('NODE_ENV') === 'development',
         migrations: ['dist/migrations/*{.ts,.js}'],
         migrationsRun: configService.get('NODE_ENV') === 'production',
-        ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+        ssl: configService.get('NODE_ENV') === 'production' ? { 
+          rejectUnauthorized: true,
+          ca: configService.get('DATABASE_CA_CERT'),
+        } : false,
         logging: configService.get('NODE_ENV') === 'development' ? ['query', 'error'] : ['error'],
         maxQueryExecutionTime: 10000, // 10 seconds
         cache: {

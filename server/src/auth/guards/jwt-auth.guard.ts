@@ -39,8 +39,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (isDevelopment) {
       const developmentBypass = this.configService.get<boolean>('AUTH_BYPASS_DEV', true);
       
-      if (developmentBypass) {
-        this.logger.warn('🚧 [DEV] Authentication bypassed in development mode');
+      const allowMockAuth = this.configService.get<boolean>('ALLOW_MOCK_AUTH', false);
+      if (developmentBypass && allowMockAuth) {
+        this.logger.warn('🚧 [DEV] Authentication bypassed');
         return this.bypassAuthInDevelopment(context);
       }
     }
@@ -76,57 +77,61 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   /**
-   * Bypass authentication in development mode
-   * Creates a mock user/tenant for testing purposes
-   */
-  private bypassAuthInDevelopment(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    const route = request.route?.path || request.url;
-    
-    // Determine if this should be a user or tenant based on route
-    const isTenantRoute = route.includes('/tenant') || route.includes('/business');
-    
-    if (isTenantRoute) {
-      // Mock tenant user for development
-      request.user = {
-        id: 'dev-tenant-id',
-        userType: 'tenant',
-        email: 'dev@tenant.local',
-        business_name: 'Development Tenant',
-        owner_name: 'Dev Owner',
-        phone: '+39000000000',
-        city: 'Development City',
-        business_type: 'restaurant',
-        latitude: 41.9028,
-        longitude: 12.4964,
-        status: 'active',
-        tokenIat: Math.floor(Date.now() / 1000),
-        ipAddress: request.ip || '127.0.0.1',
-        userAgent: request.get('User-Agent') || 'development',
-      };
-    } else {
-      // Mock regular user for development
-      request.user = {
-        id: 'dev-user-id',
-        userType: 'user',
-        email: 'dev@user.local',
-        username: 'devuser',
-        first_name: 'Dev',
-        last_name: 'User',
-        phone: '+39000000000',
-        total_points: 500,
-        level: 3,
-        status: 'active',
-        tokenIat: Math.floor(Date.now() / 1000),
-        ipAddress: request.ip || '127.0.0.1',
-        userAgent: request.get('User-Agent') || 'development',
-      };
-    }
+* Bypass authentication in development mode
+* Creates a mock user/tenant for testing purposes
+*/
+private bypassAuthInDevelopment(context: ExecutionContext): boolean {
+ const request = context.switchToHttp().getRequest();
+ const route = request.route?.path || request.url;
+ 
+ // Check environment security
+ if (this.configService.get('NODE_ENV') !== 'development') {
+   return false;
+ }
+ 
+ // Get mock user from header or default
+ const mockUserId = request.headers['x-mock-user-id'];
+ const mockUserType = request.headers['x-mock-user-type'];
+ 
+ const isTenantRoute = mockUserType === 'tenant' || route.includes('/tenant') || route.includes('/business');
+ 
+ if (isTenantRoute) {
+   request.user = {
+     id: mockUserId || 'dev-tenant-id',
+     userType: 'tenant',
+     email: 'dev@tenant.local',
+     business_name: 'Development Tenant',
+     owner_name: 'Dev Owner',
+     phone: '+39000000000',
+     city: 'Development City',
+     business_type: 'restaurant',
+     latitude: 41.9028,
+     longitude: 12.4964,
+     status: 'active',
+     tokenIat: Math.floor(Date.now() / 1000),
+     ipAddress: request.ip || '127.0.0.1',
+     userAgent: request.get('User-Agent') || 'development',
+   };
+ } else {
+   request.user = {
+     id: mockUserId || 'dev-user-id',
+     userType: 'user',
+     email: 'dev@user.local',
+     username: 'devuser',
+     first_name: 'Dev',
+     last_name: 'User',
+     phone: '+39000000000',
+     total_points: 500,
+     level: 3,
+     status: 'active',
+     tokenIat: Math.floor(Date.now() / 1000),
+     ipAddress: request.ip || '127.0.0.1',
+     userAgent: request.get('User-Agent') || 'development',
+   };
+ }
 
-    this.logger.debug(`🧪 [DEV] Mock ${request.user.userType} created for route: ${route}`);
-    
-    return true;
-  }
+ return true;
+}
 
   /**
    * Get token from request (cookie or Authorization header)
