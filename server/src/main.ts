@@ -11,7 +11,7 @@ import * as responseTime from 'response-time';
 import * as winston from 'winston';
 import { WinstonModule } from 'nest-winston';
 import * as promClient from 'prom-client';
-import { AllExceptionsFilter } from './filters/all-exceptions.filter';
+import { AllExceptionsFilter } from './filters/all-exeption.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {

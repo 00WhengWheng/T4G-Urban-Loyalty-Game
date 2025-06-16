@@ -58,10 +58,13 @@ import { RedisModule, RedisService } from '../common/redis.module';
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        throttlers: [{
-          ttl: configService.get<number>('AUTH_THROTTLE_TTL', 300),
-          limit: configService.get<number>('AUTH_THROTTLE_LIMIT', 10),
-        }],
+        throttlers: [
+          {
+            name: 'auth',
+            ttl: configService.get<number>('AUTH_THROTTLE_TTL', 300000), // milliseconds
+            limit: configService.get<number>('AUTH_THROTTLE_LIMIT', 10),
+          },
+        ],
         skipIf: () => process.env.NODE_ENV === 'development',
       }),
       inject: [ConfigService],

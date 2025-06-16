@@ -14,6 +14,15 @@ interface JwtPayload {
   exp: number;
 }
 
+interface SessionData {
+  userId: string;
+  type: 'user' | 'tenant';
+  issuedAt: Date;
+  expiresAt: Date;
+  userAgent?: string;
+  ipAddress?: string;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -180,26 +189,26 @@ export class EnhancedJwtService {
   }
 
   // Get active sessions for user
-  async getActiveSessions(userId: string): Promise<any[]> {
+  async getActiveSessions(userId: string): Promise<SessionData[]> {
     try {
       const pattern = `active_token:${userId}:*`;
-      const redis = this.redisService['redis']; // Access underlying Redis instance
+      const redis = this.redisService['redis'];
       const keys = await redis.keys(pattern);
-      
-      const sessions = [];
+
+      const sessions: SessionData[] = [];
       for (const key of keys) {
-        const sessionData = await this.redisService.getJson(key);
-        if (sessionData) {
-          sessions.push(sessionData);
-        }
+        const sessionData = await this.redisService.getJson<SessionData>(key);
+      if (sessionData) {
+        sessions.push(sessionData);
       }
-      
-      return sessions;
-    } catch (error) {
-      console.error('Error getting active sessions:', error);
-      return [];
     }
+    
+    return sessions;
+  } catch (error) {
+    console.error('Error getting active sessions:', error);
+    return [];
   }
+}
 
   // Parse duration string to seconds
   private parseDuration(duration: string): number {

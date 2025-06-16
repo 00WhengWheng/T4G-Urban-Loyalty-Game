@@ -15,14 +15,6 @@ import { RedisService } from '../common/redis.module';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { CreateTenantDto } from '../tenants/dto/create-tenant.dto';
 
-interface UserForDatabase extends Omit<CreateUserDto, 'password'> {
-  password_hash: string;
-}
-
-interface TenantForDatabase extends Omit<CreateTenantDto, 'password'> {
-  password_hash: string;
-}
-
 interface LoginAttempt {
   email: string;
   ip: string;
@@ -45,12 +37,20 @@ export class AuthService {
     private eventEmitter: EventEmitter2,
   ) {}
 
+  // ============================================================================
   // USER AUTHENTICATION
+  // ============================================================================
+
   async registerUser(createUserDto: CreateUserDto, metadata?: { ip: string; userAgent: string }) {
     // Development bypass
     if (this.configService.get('NODE_ENV') === 'development') {
       this.logger.warn('⚠️ [DEV] User registration bypass enabled');
       return this.createDevUserResponse(createUserDto);
+    }
+
+    // Validation: ensure password is provided for registration
+    if (!createUserDto.password) {
+      throw new BadRequestException('Password is required for registration');
     }
 
     // Check for existing user
@@ -71,19 +71,21 @@ export class AuthService {
     const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
     const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
 
-    // Create user data
-    const userData: UserForDatabase = {
+    // Prepare data for database - replace password with password_hash
+    const userDataForDB: CreateUserDto = {
+      ...createUserDto,
+      password_hash: hashedPassword,
+      password: undefined, // Remove plain password
       email: createUserDto.email.toLowerCase().trim(),
       username: createUserDto.username.trim(),
       first_name: createUserDto.first_name?.trim(),
       last_name: createUserDto.last_name?.trim(),
       phone: createUserDto.phone?.trim(),
-      password_hash: hashedPassword,
     };
 
     try {
       // Create user
-      const user = await this.usersService.create(userData);
+      const user = await this.usersService.create(userDataForDB);
       
       // Generate tokens
       const tokens = await this.generateTokens(user.id, 'user');
@@ -178,12 +180,20 @@ export class AuthService {
     }
   }
 
+  // ============================================================================
   // TENANT AUTHENTICATION
+  // ============================================================================
+
   async registerTenant(createTenantDto: CreateTenantDto, metadata?: { ip: string; userAgent: string }) {
     // Development bypass
     if (this.configService.get('NODE_ENV') === 'development') {
       this.logger.warn('⚠️ [DEV] Tenant registration bypass enabled');
       return this.createDevTenantResponse(createTenantDto);
+    }
+
+    // Validation: ensure password is provided for registration
+    if (!createTenantDto.password) {
+      throw new BadRequestException('Password is required for registration');
     }
 
     // Check for existing tenant
@@ -204,8 +214,11 @@ export class AuthService {
     const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
     const hashedPassword = await bcrypt.hash(createTenantDto.password, saltRounds);
 
-    // Create tenant data
-    const tenantData: TenantForDatabase = {
+    // Prepare data for database - replace password with password_hash
+    const tenantDataForDB: CreateTenantDto = {
+      ...createTenantDto,
+      password_hash: hashedPassword,
+      password: undefined, // Remove plain password
       business_name: createTenantDto.business_name.trim(),
       email: createTenantDto.email.toLowerCase().trim(),
       owner_name: createTenantDto.owner_name?.trim(),
@@ -213,19 +226,16 @@ export class AuthService {
       address: createTenantDto.address?.trim(),
       city: createTenantDto.city?.trim(),
       postal_code: createTenantDto.postal_code?.trim(),
-      latitude: createTenantDto.latitude,
-      longitude: createTenantDto.longitude,
       business_type: createTenantDto.business_type?.trim(),
       description: createTenantDto.description?.trim(),
       website: createTenantDto.website?.trim(),
       instagram: createTenantDto.instagram?.trim(),
       facebook: createTenantDto.facebook?.trim(),
-      password_hash: hashedPassword,
     };
 
     try {
       // Create tenant
-      const tenant = await this.tenantsService.create(tenantData);
+      const tenant = await this.tenantsService.create(tenantDataForDB);
       
       // Generate tokens
       const tokens = await this.generateTokens(tenant.id, 'tenant');
@@ -322,7 +332,10 @@ export class AuthService {
     }
   }
 
-  // LOGOUT METHODS
+  // ============================================================================
+  // SESSION MANAGEMENT
+  // ============================================================================
+
   async logout(userId: string, tokenIat: number, userType: 'user' | 'tenant') {
     try {
       // Blacklist the current token
@@ -342,7 +355,6 @@ export class AuthService {
     }
   }
 
-  // *** METODI MANCANTI AGGIUNTI ***
   async logoutAllDevices(userId: string, userType: 'user' | 'tenant') {
     try {
       // Blacklist all user tokens
@@ -384,7 +396,10 @@ export class AuthService {
     }
   }
 
-  // SECURITY METHODS
+  // ============================================================================
+  // SECURITY & VALIDATION METHODS
+  // ============================================================================
+
   private async generateTokens(id: string, type: 'user' | 'tenant') {
     const accessToken = await this.enhancedJwtService.generateToken(id, type);
     return {
@@ -415,6 +430,10 @@ export class AuthService {
   private isValidCoordinate(lat: number, lng: number): boolean {
     return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
   }
+
+  // ============================================================================
+  // RATE LIMITING & SECURITY
+  // ============================================================================
 
   private async checkRateLimit(email: string, type: 'user' | 'tenant', ip?: string) {
     const emailKey = `login_attempts:${type}:${email}`;
@@ -466,7 +485,10 @@ export class AuthService {
     await this.redisService.setJson(logKey, event, 86400); // 24 hours
   }
 
+  // ============================================================================
   // DEVELOPMENT HELPERS
+  // ============================================================================
+
   private createDevUserResponse(createUserDto: Partial<CreateUserDto>) {
     return {
       user: {
@@ -510,7 +532,10 @@ export class AuthService {
     };
   }
 
-  // SANITIZATION
+  // ============================================================================
+  // DATA SANITIZATION
+  // ============================================================================
+
   private sanitizeUser(user: any) {
     const { password_hash, ...result } = user;
     return result;

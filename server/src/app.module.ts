@@ -113,10 +113,15 @@ const configValidationSchema = Joi.object({
 
     // Rate Limiting - FIX
     ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService): import('@nestjs/throttler').ThrottlerModuleOptions => ({
-        ttl: configService.get<number>('THROTTLE_TTL', 60),
-        limit: configService.get<number>('THROTTLE_LIMIT', 100),
+    imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: configService.get<number>('THROTTLE_TTL', 60000), // milliseconds
+            limit: configService.get<number>('THROTTLE_LIMIT', 100),
+          },
+        ],
       }),
       inject: [ConfigService],
     }),
