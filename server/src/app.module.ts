@@ -95,29 +95,28 @@ const configValidationSchema = Joi.object({
       inject: [ConfigService],
     }),
 
-    // Redis Cache Configuration
+    // Redis Cache Configuration - FIX
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        store: redisStore,
+        store: redisStore as any,
         host: configService.get('REDIS_HOST'),
         port: configService.get('REDIS_PORT'),
         password: configService.get('REDIS_PASSWORD'),
         db: configService.get('REDIS_DB', 0),
-        ttl: 300, // 5 minutes default
-        max: 1000, // maximum number of items in cache
+        ttl: 300,
+        max: 1000,
       }),
       inject: [ConfigService],
       isGlobal: true,
     }),
 
-    // Rate Limiting
+    // Rate Limiting - FIX
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        ttl: configService.get('THROTTLE_TTL', 60),
-        limit: configService.get('THROTTLE_LIMIT', 100),
-        storage: new Map(), // Use Redis in production
+      useFactory: (configService: ConfigService): import('@nestjs/throttler').ThrottlerModuleOptions => ({
+        ttl: configService.get<number>('THROTTLE_TTL', 60),
+        limit: configService.get<number>('THROTTLE_LIMIT', 100),
       }),
       inject: [ConfigService],
     }),

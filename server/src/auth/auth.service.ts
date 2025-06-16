@@ -322,7 +322,7 @@ export class AuthService {
     }
   }
 
-  // LOGOUT
+  // LOGOUT METHODS
   async logout(userId: string, tokenIat: number, userType: 'user' | 'tenant') {
     try {
       // Blacklist the current token
@@ -339,6 +339,48 @@ export class AuthService {
     } catch (error) {
       this.logger.error('Logout failed:', error);
       throw new BadRequestException('Logout failed');
+    }
+  }
+
+  // *** METODI MANCANTI AGGIUNTI ***
+  async logoutAllDevices(userId: string, userType: 'user' | 'tenant') {
+    try {
+      // Blacklist all user tokens
+      const count = await this.enhancedJwtService.blacklistAllUserTokens(userId, userType);
+
+      // Emit logout all event
+      this.eventEmitter.emit(`${userType}.logout-all`, {
+        [`${userType}Id`]: userId,
+        tokensInvalidated: count,
+        timestamp: new Date(),
+      });
+
+      return { 
+        message: 'Logged out from all devices',
+        tokensInvalidated: count
+      };
+    } catch (error) {
+      this.logger.error('Logout all devices failed:', error);
+      throw new BadRequestException('Logout all devices failed');
+    }
+  }
+
+  async getActiveSessions(userId: string): Promise<any[]> {
+    try {
+      // Get active sessions from JWT service
+      const sessions = await this.enhancedJwtService.getActiveSessions(userId);
+      
+      // Format sessions for response
+      return sessions.map(session => ({
+        issuedAt: session.issuedAt,
+        expiresAt: session.expiresAt,
+        userAgent: session.userAgent || 'Unknown',
+        ipAddress: session.ipAddress || 'Unknown',
+        type: session.type
+      }));
+    } catch (error) {
+      this.logger.error('Get active sessions failed:', error);
+      return [];
     }
   }
 

@@ -54,13 +54,15 @@ import { RedisModule, RedisService } from '../common/redis.module';
       inject: [ConfigService],
     }),
 
-    // Rate limiting for authentication endpoints
+    
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        ttl: configService.get<number>('AUTH_THROTTLE_TTL', 300), // 5 minutes
-        limit: configService.get<number>('AUTH_THROTTLE_LIMIT', 10), // 10 attempts per 5 minutes
-        skipIf: () => process.env.NODE_ENV === 'development', // Skip throttling in development
+        throttlers: [{
+          ttl: configService.get<number>('AUTH_THROTTLE_TTL', 300),
+          limit: configService.get<number>('AUTH_THROTTLE_LIMIT', 10),
+        }],
+        skipIf: () => process.env.NODE_ENV === 'development',
       }),
       inject: [ConfigService],
     }),
