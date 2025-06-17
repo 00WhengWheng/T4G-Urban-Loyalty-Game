@@ -148,12 +148,23 @@ export class ChallengesService {
   }
 
   async getChallengeLeaderboard(challengeId: string, limit: number = 50) {
-    return this.participantRepository.find({
-      where: { challenge_id: challengeId },
-      relations: ['user'],
-      order: { current_score: 'DESC' },
-      take: limit,
-    });
+    return this.participantRepository
+      .createQueryBuilder('participant')
+      .select([
+        'participant.id',
+        'participant.current_score',
+        'participant.completion_status',
+        'user.id',
+        'user.username',
+        'user.avatar_url'
+      ])
+      .leftJoin('participant.user', 'user')
+      .where('participant.challenge_id = :challengeId', { challengeId })
+      .andWhere('participant.completion_status = :status', { status: 'active' })
+      .orderBy('participant.current_score', 'DESC')
+      .limit(limit)
+      .cache(60000) // Cache 1 minuto
+      .getMany();
   }
 
   async getUserChallenges(userId: string) {

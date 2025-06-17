@@ -1,5 +1,5 @@
 import { Module, Global, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { RedisModule as IoRedisModule } from '@nestjs-modules/ioredis';
+import { RedisModule as IoRedisModule, RedisModuleOptions } from '@nestjs-modules/ioredis';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -164,63 +164,20 @@ export class RedisService {
   imports: [
     IoRedisModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const redisConfig = {
-          type: 'single' as const,
-          options: {
-            host: configService.get('REDIS_HOST', 'localhost'),
-            port: configService.get<number>('REDIS_PORT', 6379),
-            password: configService.get('REDIS_PASSWORD'),
-            db: configService.get<number>('REDIS_DB', 0),
-            retryDelayOnFailover: 100,
-            maxRetriesPerRequest: 3,
-            lazyConnect: true,
-            keepAlive: 30000,
-            family: 4,
-            keyPrefix: 't4g:',
-            
-            // Connection pool settings
-            maxLoadingTimeout: 10000,
-            
-            // Retry settings
-            retryStrategy: (times: number) => {
-              if (times > 5) {
-                console.error('❌ Redis connection failed after 5 retries');
-                return null;
-              }
-              return Math.min(times * 50, 2000);
-            },
-            
-            // Connection events
-            onConnect: () => {
-              console.log('🔄 Redis connecting...');
-            },
-            
-            onReady: () => {
-              console.log('✅ Redis connection established');
-            },
-            
-            onError: (error: Error) => {
-              console.error('❌ Redis connection error:', error.message);
-            },
-            
-            onClose: () => {
-              console.log('🔄 Redis connection closed');
-            },
-            
-            onReconnecting: () => {
-              console.log('🔄 Redis reconnecting...');
-            },
-          },
-        };
-
-        return redisConfig;
-      },
+      useFactory: (configService: ConfigService): RedisModuleOptions => ({
+        type: 'single',
+        options: {
+          host: configService.get('REDIS_HOST', 'localhost'),
+          port: configService.get<number>('REDIS_PORT', 6379),
+          password: configService.get('REDIS_PASSWORD'),
+          db: configService.get<number>('REDIS_DB', 0),
+        },
+      }),
       inject: [ConfigService],
     }),
   ],
   providers: [RedisService],
-  exports: [IoRedisModule, RedisService],
+  exports: [RedisService],
 })
 export class RedisModule implements OnModuleInit, OnModuleDestroy {
   constructor(

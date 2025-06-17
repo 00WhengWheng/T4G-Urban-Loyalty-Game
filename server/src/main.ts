@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfigService, ConfigModule } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
@@ -11,7 +11,8 @@ import * as responseTime from 'response-time';
 import * as winston from 'winston';
 import { WinstonModule } from 'nest-winston';
 import * as promClient from 'prom-client';
-import { AllExceptionsFilter } from './filters/all-exeption.filter';
+import { AllExceptionsFilter } from './exceptions/all-exeption.filter';
+import { appConfig } from './config/app.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -25,6 +26,12 @@ async function bootstrap() {
         }),
       ],
     }),
+  });
+
+  // Load configuration
+  ConfigModule.forRoot({
+    isGlobal: true,
+    load: [appConfig],
   });
 
   // Prometheus metrics
