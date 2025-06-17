@@ -77,6 +77,16 @@ export const initializeDatabase = async () => {
         console.log(`🔗 Connected to: ${AppDataSource.options.type} database`);
         console.log(`📋 Entities loaded: ${AppDataSource.entityMetadatas.length}`);
         console.log(`🔄 Migrations: ${AppDataSource.migrations.length} available`);
+
+        // Accept self-signed certificates in development
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+        console.log('⚠️  [DEV] NODE_TLS_REJECT_UNAUTHORIZED set to 0 to accept self-signed certificates');
+
+        // Explicitly set rejectUnauthorized: false in SSL configuration
+        if (appConfig.database.ssl && typeof appConfig.database.ssl === 'object') {
+          appConfig.database.ssl.rejectUnauthorized = false;
+          console.log('⚠️  [DEV] SSL rejectUnauthorized set to false for self-signed certificates');
+        }
       }
 
       // Log database configuration
@@ -85,6 +95,8 @@ export const initializeDatabase = async () => {
         ssl: appConfig.database.ssl,
         pool: appConfig.database.pool,
       });
+      console.log('🔧 SSL Configuration:', appConfig.database.ssl);
+      console.log('🔧 NODE_TLS_REJECT_UNAUTHORIZED:', process.env.NODE_TLS_REJECT_UNAUTHORIZED);
     }
     return AppDataSource;
   } catch (error) {

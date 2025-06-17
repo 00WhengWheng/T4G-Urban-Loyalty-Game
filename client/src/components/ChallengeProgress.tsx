@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Users } from 'lucide-react';
-import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
-import { ProgressBar } from '../ui/ProgressBar';
+import { Card } from './ui/Card';
+import { Badge } from './ui/Badge';
+import { ProgressBar } from './ui/ProgressBar';
 
 // Challenge Progress Component
 interface ChallengeProgressProps {

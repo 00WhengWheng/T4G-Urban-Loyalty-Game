@@ -2,9 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, MapPin, Gamepad2, QrCode, Trophy, Share2, Clock, TrendingUp, Users } from 'lucide-react';
-import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
-import { ProgressBar } from '../ui/ProgressBar';
+import { Card } from './ui/Card';
+import { Badge } from './ui/Badge';
+import { ProgressBar } from './ui/ProgressBar';
 
 // Welcome Header Component
 interface WelcomeHeaderProps {

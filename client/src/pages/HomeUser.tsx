@@ -18,15 +18,40 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { StatsCard } from '../components/ui/StatsCard';
-import { WelcomeHeader } from '../components/dashboard/WelcomeHeader';
-import { QuickActions } from '../components/dashboard/QuickActions';
-import { RecentActivity } from '../components/dashboard/RecentActivity';
-import { LeaderboardPreview } from '../components/dashboard/LeaderboardPreview';
+import { WelcomeHeader } from '../components/WelcomeHeader';
+import { QuickActions } from '../components/QuickActions';
+import { RecentActivity } from '../components/RecentActivity';
+import { LeaderboardPreview } from '../components/LeaderboardPreview';
 
 export const HomeUser: React.FC = () => {
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState({
+  type RecentActivity = {
+    id: number;
+    type: string;
+    description: string;
+    points: number;
+    timestamp: Date;
+  };
+
+  type TopUser = {
+    id: number;
+    username: string;
+    points: number;
+    level: number;
+  };
+
+  type DashboardData = {
+    weeklyPoints: number;
+    dailyStreak: number;
+    nextLevelPoints: number;
+    activeTokens: number;
+    completedChallenges: number;
+    recentActivities: RecentActivity[];
+    topUsers: TopUser[];
+  };
+
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
     weeklyPoints: 0,
     dailyStreak: 0,
     nextLevelPoints: 0,

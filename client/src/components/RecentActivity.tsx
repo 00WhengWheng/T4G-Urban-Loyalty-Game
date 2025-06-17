@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { QrCode, Gamepad2, Trophy, Share2, Clock } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from './ui/Card';
 
 // Recent Activity Component
 interface Activity {

@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -22,6 +21,7 @@ import { NfcsModule } from './nfcs/nfcs.module';
 import { TokensModule } from './tokens/tokens.module';
 import { SharesModule } from './shares/shares.module';
 import { ScoringModule } from './scoring/scoring.module';
+import { DatabaseModule } from './database/database.module';
 
 // Entities
 import { User } from './users/user.entity';
@@ -61,41 +61,6 @@ const configValidationSchema = Joi.object({
         allowUnknown: true,
         abortEarly: true,
       },
-    }),
-
-    // Database Configuration
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        url: configService.get('DATABASE_URL'),
-        entities: [
-          User,
-          Tenant,
-          Challenge,
-          ChallengeParticipant,
-          NfcTag,
-          NfcScan,
-          Token,
-          TokenClaim,
-          Game,
-          GameAttempt,
-          Share,
-        ],
-        synchronize: configService.get('NODE_ENV') === 'development',
-        migrations: ['dist/migrations/*{.ts,.js}'],
-        migrationsRun: configService.get('NODE_ENV') === 'production',
-        ssl: configService.get('NODE_ENV') === 'production' ? { 
-          rejectUnauthorized: true,
-          ca: configService.get('DATABASE_CA_CERT'),
-        } : false,
-        logging: configService.get('NODE_ENV') === 'development' ? ['query', 'error'] : ['error'],
-        maxQueryExecutionTime: 10000, // 10 seconds
-        cache: {
-          duration: 30000, // 30 seconds
-        },
-      }),
-      inject: [ConfigService],
     }),
 
     // Redis Cache Configuration - FIX
@@ -167,6 +132,7 @@ const configValidationSchema = Joi.object({
     TokensModule,
     SharesModule,
     ScoringModule,
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

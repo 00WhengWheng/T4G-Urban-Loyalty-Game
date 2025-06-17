@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Trophy } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from './ui/Card';
 
 // Leaderboard Preview Component
 interface TopUser {

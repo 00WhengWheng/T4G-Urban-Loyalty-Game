@@ -362,7 +362,7 @@ export const ChallengesPage: React.FC = () => {
                       <Badge className={getStatusColor(challenge.status)} size="sm">
                         {getStatusLabel(challenge.status)}
                       </Badge>
-                      <Badge variant="outline" size="sm">
+                      <Badge variant="default" size="sm">
                         {getCategoryLabel(challenge.challenge_category)}
                       </Badge>
                     </div>
@@ -501,7 +501,7 @@ export const ChallengeDetailPage: React.FC = () => {
 
     try {
       // Simulate API call
-      setChallenge(prev => ({
+      setChallenge((prev: any) => ({
         ...prev,
         user_progress: {
           ...prev.user_progress,
@@ -527,7 +527,7 @@ export const ChallengeDetailPage: React.FC = () => {
     if (!challenge) return;
 
     try {
-      setChallenge(prev => ({
+      setChallenge((prev: any) => ({
         ...prev,
         user_progress: {
           ...prev.user_progress,
@@ -588,7 +588,7 @@ export const ChallengeDetailPage: React.FC = () => {
               <Badge className={getStatusColor(challenge.status)}>
                 {getStatusLabel(challenge.status)}
               </Badge>
-              <Badge variant="outline">
+              <Badge variant="default">
                 {getCategoryLabel(challenge.challenge_category)}
               </Badge>
             </div>

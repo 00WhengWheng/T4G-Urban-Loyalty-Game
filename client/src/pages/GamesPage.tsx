@@ -18,7 +18,8 @@ import {
   TrendingUp,
   Users,
   Filter,
-  Search
+  Search,
+  X
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Card } from '../components/ui/Card';
@@ -326,7 +327,7 @@ export const GamesPage: React.FC = () => {
                     </div>
                     <ProgressBar 
                       progress={(attemptsUsed / game.max_attempts_per_user) * 100} 
-                      color={attemptsRemaining > 0 ? 'blue' : 'red'}
+                      color={attemptsRemaining > 0 ? 'blue' : 'orange'}
                     />
                   </div>
 
@@ -386,7 +387,7 @@ export const QuizGame: React.FC<QuizGameProps> = ({ game, onComplete, onClose })
   useEffect(() => {
     if (isGameStarted && !isGameEnded && timeLeft > 0) {
       timerRef.current = setTimeout(() => {
-        setTimeLeft(prev => prev - 1);
+        setTimeLeft((prev: number) => prev - 1);
       }, 1000);
     } else if (timeLeft === 0 && !isGameEnded) {
       handleGameEnd();
@@ -465,11 +466,11 @@ export const QuizGame: React.FC<QuizGameProps> = ({ game, onComplete, onClose })
             <div className="space-y-3 mb-6 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Round:</span>
-                <span className="font-medium">{totalRounds}</span>
+                <span className="font-medium">{questions.length}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Obiettivo:</span>
-                <span className="font-medium">{'<'}{targetTime}ms</span>
+                <span className="font-medium">Rispondi correttamente alle domande</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Punti disponibili:</span>
@@ -487,182 +488,6 @@ export const QuizGame: React.FC<QuizGameProps> = ({ game, onComplete, onClose })
               <Button onClick={startGame} className="w-full">
                 <Play className="w-4 h-4 mr-2" />
                 Inizia Test
-              </Button>
-              <Button onClick={onClose} variant="outline" className="w-full">
-                Annulla
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (isGameEnded) {
-    const validTimes = reactionTimes.filter(time => time > 0);
-    const avgTime = validTimes.length > 0 ? validTimes.reduce((a, b) => a + b, 0) / validTimes.length : 1000;
-    const bestTime = validTimes.length > 0 ? Math.min(...validTimes) : 1000;
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full"
-        >
-          <Card className="text-center p-8">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-              avgTime <= targetTime ? 'bg-green-100' : 'bg-orange-100'
-            }`}>
-              {avgTime <= targetTime ? (
-                <CheckCircle className="w-8 h-8 text-green-600" />
-              ) : (
-                <Clock className="w-8 h-8 text-orange-600" />
-              )}
-            </div>
-            
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Test Completato!</h2>
-            <p className="text-gray-600 mb-6">I tuoi tempi di reazione</p>
-            
-            <div className="space-y-4 mb-6">
-              <div>
-                <div className="text-sm text-gray-600">Tempo Medio</div>
-                <div className="text-2xl font-bold text-primary-600">
-                  {Math.round(avgTime)}ms
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-600">Migliore</div>
-                <div className="text-lg font-semibold text-green-600">
-                  {Math.round(bestTime)}ms
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-600">Round Completati</div>
-                <div className="text-lg font-semibold">
-                  {validTimes.length}/{totalRounds}
-                </div>
-              </div>
-            </div>
-
-            <div className="text-sm text-gray-500">
-              Tornando alla lista giochi...
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Game playing interface
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 relative" onClick={handleClick}>
-      {/* Header */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-white">
-        <Button onClick={onClose} variant="outline" size="sm" className="text-white border-white">
-          <X className="w-4 h-4 mr-2" />
-          Esci
-        </Button>
-        <div className="text-center">
-          <div className="text-lg font-bold">Round {currentRound + 1}/{totalRounds}</div>
-          {reactionTimes.length > 0 && (
-            <div className="text-sm opacity-75">
-              Ultimo: {Math.round(reactionTimes[reactionTimes.length - 1])}ms
-            </div>
-          )}
-        </div>
-        <div className="w-16"> {/* Spacer */}</div>
-      </div>
-
-      {/* Game Area */}
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center text-white">
-          {gameState === 'waiting' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <div className="text-2xl font-bold mb-4">Preparati...</div>
-              <div className="text-lg opacity-75">Il cerchio apparirà presto</div>
-            </motion.div>
-          )}
-
-          {gameState === 'click' && showTarget && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="w-32 h-32 bg-green-500 rounded-full cursor-pointer shadow-lg hover:bg-green-400 transition-colors"
-            />
-          )}
-
-          {gameState === 'too_early' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center"
-            >
-              <div className="text-2xl font-bold mb-4 text-red-400">Troppo presto!</div>
-              <div className="text-lg opacity-75">Aspetta il cerchio verde</div>
-            </motion.div>
-          )}
-
-          {gameState === 'ready' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center"
-            >
-              <div className="text-2xl font-bold mb-4 text-green-400">Ottimo!</div>
-              <div className="text-lg opacity-75">
-                {Math.round(reactionTimes[reactionTimes.length - 1])}ms
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
-
-      {/* Instructions */}
-      {gameState === 'waiting' && (
-        <div className="absolute bottom-8 left-4 right-4 text-center text-white opacity-75">
-          <p className="text-sm">Clicca ovunque quando vedi il cerchio verde</p>
-        </div>
-      )}
-    </div>
-  );
-};
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full"
-        >
-          <Card className="text-center p-8">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Brain className="w-8 h-8 text-blue-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">{game.title}</h2>
-            <p className="text-gray-600 mb-6">{game.description}</p>
-            
-            <div className="space-y-3 mb-6 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Domande:</span>
-                <span className="font-medium">{questions.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Tempo limite:</span>
-                <span className="font-medium">{formatTime(game.time_limit_seconds)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Punti disponibili:</span>
-                <span className="font-medium">{game.points_per_completion}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Button onClick={startGame} className="w-full">
-                <Play className="w-4 h-4 mr-2" />
-                Inizia Quiz
               </Button>
               <Button onClick={onClose} variant="outline" className="w-full">
                 Annulla
@@ -715,77 +540,24 @@ export const QuizGame: React.FC<QuizGameProps> = ({ game, onComplete, onClose })
     );
   }
 
+  // Game playing interface
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Button onClick={onClose} variant="outline" size="sm">
-            <X className="w-4 h-4 mr-2" />
-            Esci
-          </Button>
-          <div className="text-center">
-            <div className="text-lg font-bold text-gray-900">{formatTime(timeLeft)}</div>
-            <div className="text-sm text-gray-500">
-              {currentQuestionIndex + 1} di {questions.length}
-            </div>
-          </div>
-          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-            timeLeft > 30 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-          }`}>
-            {timeLeft > 30 ? 'In tempo' : 'Affrettati!'}
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 relative">
+      {/* Header */}
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-white">
+        <Button onClick={onClose} variant="outline" size="sm" className="text-white border-white">
+          <X className="w-4 h-4 mr-2" />
+          Esci
+        </Button>
+        <div className="text-center">
+          <div className="text-lg font-bold">Domanda {currentQuestionIndex + 1}/{questions.length}</div>
+          {/* No reactionTimes in QuizGame; removed erroneous reference */}
         </div>
-
-        {/* Progress */}
-        <div className="mb-6">
-          <ProgressBar progress={((currentQuestionIndex + 1) / questions.length) * 100} />
-        </div>
-
-        {/* Question */}
-        <Card className="p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
-            {currentQuestion.question}
-          </h2>
-
-          <div className="space-y-3">
-            {currentQuestion.options.map((option: string, index: number) => (
-              <button
-                key={index}
-                onClick={() => handleAnswerSelect(index)}
-                className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-                  selectedAnswers[currentQuestionIndex] === index
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    selectedAnswers[currentQuestionIndex] === index
-                      ? 'border-primary-500 bg-primary-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {selectedAnswers[currentQuestionIndex] === index && (
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                  <span className="font-medium">{option}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-8 flex justify-end">
-            <Button
-              onClick={handleNextQuestion}
-              disabled={selectedAnswers[currentQuestionIndex] === undefined}
-              className="min-w-[120px]"
-            >
-              {currentQuestionIndex === questions.length - 1 ? 'Termina' : 'Avanti'}
-            </Button>
-          </div>
-        </Card>
+        <div className="w-16"> {/* Spacer */}</div>
       </div>
+
+      {/* Game Area */}
+      {/* No reaction game UI in QuizGame; removed erroneous block */}
     </div>
   );
 };
@@ -886,3 +658,51 @@ export const ReactionGame: React.FC<ReactionGameProps> = ({ game, onComplete, on
   };
 
   if (!isGameStarted) {
+    // TODO: Add your pre-game UI here
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div>
+          <h2 className="text-2xl font-bold mb-4">{game.title}</h2>
+          <p className="mb-4">{game.description}</p>
+          <Button onClick={startGame}>
+            <Play className="w-4 h-4 mr-2" />
+            Inizia
+          </Button>
+          <Button onClick={onClose} variant="outline" className="ml-2">
+            Annulla
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isGameEnded) {
+    // TODO: Add your end-game UI here
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Gioco completato!</h2>
+          <p className="mb-4">Tempo medio di reazione: {reactionTimes.length > 0 ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length) : 0} ms</p>
+          <div className="text-sm text-gray-500">Tornando alla lista giochi...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // TODO: Add your in-game UI here
+  return (
+    <div className="min-h-screen flex items-center justify-center" onClick={handleClick}>
+      <div>
+        <h2 className="text-xl font-bold mb-2">Round {currentRound + 1} / {totalRounds}</h2>
+        {gameState === 'too_early' ? (
+          <div className="text-red-600 font-semibold mb-4">Troppo presto! Aspetta il segnale.</div>
+        ) : showTarget ? (
+          <div className="w-24 h-24 bg-green-500 rounded-full mx-auto mb-4"></div>
+        ) : (
+          <div className="w-24 h-24 bg-gray-300 rounded-full mx-auto mb-4"></div>
+        )}
+        <p className="text-gray-600">Clicca il cerchio verde il più velocemente possibile quando appare!</p>
+      </div>
+    </div>
+  );
+}

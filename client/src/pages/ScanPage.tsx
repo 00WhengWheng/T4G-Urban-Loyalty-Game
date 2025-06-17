@@ -164,7 +164,7 @@ export const ScanPage: React.FC = () => {
     const result = mockScanResults[resultType as keyof typeof mockScanResults];
     setScanResult(result);
 
-    if (resultType === 'success') {
+    if (resultType === 'success' && 'points_earned' in result) {
       setScanState('success');
       updateUserPoints(result.points_earned);
       

@@ -114,6 +114,11 @@ const businessTypeConfig = {
   default: { icon: MapPin, color: 'text-gray-600', bg: 'bg-gray-100' }
 };
 
+function getBusinessIcon(type: string) {
+  const config = businessTypeConfig[type as keyof typeof businessTypeConfig] || businessTypeConfig.default;
+  return config;
+}
+
 export const MapPage: React.FC = () => {
   const [selectedMerchant, setSelectedMerchant] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -378,8 +383,8 @@ const MerchantCard: React.FC<{ merchant: any; onClick: () => void }> = ({ mercha
   const IconComponent = config.icon;
 
   return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
-      <div className="p-4">
+    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+      <div className="p-4" onClick={onClick}>
         <div className="flex items-start justify-between">
           <div className="flex space-x-3 flex-1">
             <div className={`w-12 h-12 ${config.bg} rounded-lg flex items-center justify-center`}>
@@ -434,5 +439,45 @@ const MerchantDetail: React.FC<{ merchant: any }> = ({ merchant }) => {
         <div className={`w-16 h-16 ${config.bg} rounded-xl flex items-center justify-center`}>
           <IconComponent className={`w-8 h-8 ${config.color}`} />
         </div>
-        
-        <div className="flex-
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900">{merchant.business_name}</h3>
+          <div className="flex items-center space-x-2 mt-1">
+            <Badge variant={merchant.isOpen ? 'success' : 'error'} size="sm">
+              {merchant.isOpen ? 'Aperto' : 'Chiuso'}
+            </Badge>
+            <div className="flex items-center space-x-1">
+              <Star className="w-4 h-4 text-yellow-400 fill-current" />
+              <span className="text-sm text-gray-600">{merchant.rating}</span>
+            </div>
+            <span className="text-xs text-gray-500">{merchant.distance}km</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">{merchant.address}</p>
+        </div>
+      </div>
+      {/* Description */}
+      <p className="text-gray-700 text-sm">{merchant.description}</p>
+      {/* Contact Info */}
+      <div className="flex items-center space-x-4 text-sm text-gray-600">
+        <div className="flex items-center space-x-1">
+          <Phone className="w-4 h-4" />
+          <span>{merchant.phone}</span>
+        </div>
+        <div className="flex items-center space-x-1">
+          <Globe className="w-4 h-4" />
+          <a href={`https://${merchant.website}`} target="_blank" rel="noopener noreferrer" className="underline">{merchant.website}</a>
+        </div>
+      </div>
+      {/* Rewards */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-900 mb-2">Reward attivi</h4>
+        <div className="flex flex-wrap gap-2">
+          {merchant.active_tokens.map((token: any, idx: number) => (
+            <Badge key={idx} variant="info" size="sm">
+              {token.name} - {token.points} punti
+            </Badge>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

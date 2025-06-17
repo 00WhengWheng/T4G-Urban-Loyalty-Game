@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react-swc';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
@@ -20,9 +19,6 @@ export default defineConfig({
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // <== 365 days
-              },
-              cacheKeyWillBeUsed: async ({ request }) => {
-                return `${request.url}`;
               },
             },
           },
@@ -66,25 +62,22 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
-    host: true,
+    port: 4000,
+    host: '0.0.0.0',
     open: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://172.30.37.133:3001',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
-  preview: {
-    port: 3000,
-    host: true,
-  },
   build: {
     target: 'es2020',
     outDir: 'dist',
+    emptyOutDir: true,
     sourcemap: true,
     rollupOptions: {
       output: {
@@ -110,11 +103,4 @@ export default defineConfig({
   },
   // Environment variables
   envPrefix: 'VITE_',
-  // Test configuration
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    css: true,
-  },
 });

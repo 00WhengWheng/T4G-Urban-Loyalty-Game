@@ -13,10 +13,11 @@ import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { HomeUser } from './pages/HomeUser';
-import { MapPage } from './pages/MapUser';
+import DashboardPage from './pages/DashboardPage';
+import { MapPage } from './pages/MapPage';
 import { GamesPage } from './pages/GamesPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { LeaderboardPage } from './pages/LeaderboardPage';
+import ProfilePage from './pages/ProfilePage';
+import LeaderboardPage from './pages/LeaderboardPage';
 import { TokensPage } from './pages/TokensPage';
 import { ChallengesPage } from './pages/ChallengesPage';
 import { ScanPage } from './pages/ScanPage';
@@ -101,11 +102,11 @@ function App() {
 
             {/* Protected Routes */}
             <Route 
-              path="/dashboard" 
+              path="/landingpage" 
               element={
                 <ProtectedRoute>
                   <AppLayout>
-                    <DashboardPage />
+                    <HomeUser />
                   </AppLayout>
                 </ProtectedRoute>
               } 
@@ -182,7 +183,7 @@ function App() {
             />
 
             {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Navigate to="/landingpage" replace />} />
             
             {/* 404 fallback */}
             <Route 

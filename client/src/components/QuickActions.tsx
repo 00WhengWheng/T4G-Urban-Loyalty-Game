@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MapPin, Gamepad2, QrCode, Trophy } from 'lucide-react';
-import { Card } from '../ui/Card';
+import { Card } from './ui/Card';
 
 // Quick Actions Component
 export const QuickActions: React.FC = () => {

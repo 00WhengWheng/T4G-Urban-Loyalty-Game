@@ -13,6 +13,7 @@ import { WinstonModule } from 'nest-winston';
 import * as promClient from 'prom-client';
 import { AllExceptionsFilter } from './exceptions/all-exeption.filter';
 import { appConfig } from './config/app.config';
+import { DataSource } from 'typeorm';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -197,6 +198,14 @@ async function bootstrap() {
   }
   
   console.log('==========================================\n');
+
+  // Verifica connessione al database
+  const dataSource = app.get(DataSource);
+  if (dataSource.isInitialized) {
+    console.log('📊 Database connection established successfully');
+  } else {
+    console.error('❌ Database connection failed');
+  }
 }
 
 // Error handling
