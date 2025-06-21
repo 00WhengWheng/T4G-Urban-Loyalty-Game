@@ -15,7 +15,7 @@ export class NfcController {
     if (req.user.userType !== 'user') {
       throw new ForbiddenException('Only users can scan NFC tags');
     }
-    return this.nfcService.scanNfcTag(req.user.id, createScanDto);
+    return this.nfcService.scanNFCTag(req.user.id, createScanDto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -27,6 +27,11 @@ export class NfcController {
     return this.nfcService.getUserScanHistory(req.user.id, limit);
   }
 
+  @Get('popular')
+  async getPopularTags(@Query('limit') limit: number = 10) {
+    return this.nfcService.getPopularNFCTags(limit);
+  }
+
   // TENANT ENDPOINTS
   @UseGuards(JwtAuthGuard)
   @Post('tags')
@@ -34,51 +39,77 @@ export class NfcController {
     if (req.user.userType !== 'tenant') {
       throw new ForbiddenException('Only tenants can create NFC tags');
     }
-    return this.nfcService.createNfcTag(req.user.id, createTagDto);
+    return this.nfcService.createNFCTag(req.user.id, createTagDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('tags')
-  async getTenantTags(@Request() req) {
+  async getTenantTags(
+    @Request() req, 
+    @Query('page') page: number = 1, 
+    @Query('limit') limit: number = 20
+  ) {
     if (req.user.userType !== 'tenant') {
       throw new ForbiddenException('Only tenants can view their tags');
     }
-    return this.nfcService.getTenantTags(req.user.id);
+    return this.nfcService.getTenantNFCTags(req.user.id, page, limit);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put('tags/:tagId')
-  async updateTag(@Request() req, @Param('tagId') tagId: string, @Body() updateData: any) {
+  async updateTag(
+    @Request() req, 
+    @Param('tagId') tagId: string, 
+    @Body() updateTagDto: Partial<CreateNfcTagDto>
+  ) {
     if (req.user.userType !== 'tenant') {
-      throw new ForbiddenException('Only tenants can update tags');
+      throw new ForbiddenException('Only tenants can update their tags');
     }
-    return this.nfcService.updateNfcTag(tagId, req.user.id, updateData);
+    return this.nfcService.updateNFCTag(tagId, req.user.id, updateTagDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('tags/:tagId')
   async deleteTag(@Request() req, @Param('tagId') tagId: string) {
     if (req.user.userType !== 'tenant') {
-      throw new ForbiddenException('Only tenants can delete tags');
+      throw new ForbiddenException('Only tenants can delete their tags');
     }
-    return this.nfcService.deleteNfcTag(tagId, req.user.id);
+    return this.nfcService.deleteNFCTag(tagId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('tags/:tagId/stats')
+  async getTagStats(@Request() req, @Param('tagId') tagId: string) {
+    if (req.user.userType !== 'tenant') {
+      throw new ForbiddenException('Only tenants can view tag stats');
+    }
+    return this.nfcService.getNFCTagStats(tagId, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('stats')
+  async getTenantStats(@Request() req) {
+    if (req.user.userType !== 'tenant') {
+      throw new ForbiddenException('Only tenants can view NFC stats');
+    }
+    return this.nfcService.getTenantNFCStats(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('scan-stats')
   async getScanStats(@Request() req, @Query('days') days: number = 30) {
     if (req.user.userType !== 'tenant') {
       throw new ForbiddenException('Only tenants can view scan stats');
     }
-    return this.nfcService.getTenantScanStats(req.user.id, days);
+    return this.nfcService.getTenantNFCStats(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('tags/:tagId/scans')
+  @Get('tags/:tagId/scan-count')
   async getTagScanCount(@Request() req, @Param('tagId') tagId: string) {
     if (req.user.userType !== 'tenant') {
       throw new ForbiddenException('Only tenants can view tag scan counts');
     }
-    return this.nfcService.getTagScanCount(tagId);
+    return this.nfcService.getNFCTagStats(tagId, req.user.id);
   }
 }

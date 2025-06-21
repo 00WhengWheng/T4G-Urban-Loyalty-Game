@@ -19,5 +19,5 @@ export class CreateShareDto {
 
   @IsOptional()
   @IsString()
-  share_content?: string;
+  content_data?: string;
 }

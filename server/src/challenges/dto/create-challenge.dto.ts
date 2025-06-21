@@ -42,4 +42,9 @@ export class CreateChallengeDto {
   @IsOptional()
   @IsObject()
   rules?: any;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['draft', 'active', 'paused', 'completed', 'cancelled'])
+  status?: string;
 }

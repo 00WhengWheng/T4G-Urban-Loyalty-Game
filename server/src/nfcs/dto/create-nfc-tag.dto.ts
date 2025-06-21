@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsOptional, IsDecimal } from 'class-validator';
 
 export class CreateNfcTagDto {
   @IsString()
@@ -6,21 +6,29 @@ export class CreateNfcTagDto {
 
   @IsOptional()
   @IsString()
-  tag_name?: string;
+  tag_location?: string;
 
   @IsOptional()
-  @IsString()
-  location_description?: string;
+  @IsDecimal()
+  latitude?: number;
+
+  @IsOptional()
+  @IsDecimal()
+  longitude?: number;
+
+  @IsNumber()
+  points_per_scan: number;
+
+  @IsNumber()
+  max_daily_scans: number;
+
+  @IsNumber()
+  max_total_scans: number;
+
+  @IsNumber()
+  scan_radius: number; // in meters
 
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
-
-  @IsOptional()
-  @IsNumber()
-  max_scans_per_user_per_day?: number;
-
-  @IsOptional()
-  @IsNumber()
-  points_per_scan?: number;
 }

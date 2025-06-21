@@ -1,67 +1,109 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Challenge } from './challenge.entity';
-import { ChallengeParticipant } from './challenge-participant.entity';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 
 @Injectable()
 export class ChallengesService {
   constructor(
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>,
-    
-    @InjectRepository(ChallengeParticipant) // ✅ VERIFICA CHE SIA PRESENTE
-    private participantRepository: Repository<ChallengeParticipant>,
+    private readonly prisma: PrismaService,
   ) {}
 
   // TENANT CHALLENGE MANAGEMENT
-  async create(tenantId: string, createChallengeDto: CreateChallengeDto): Promise<Challenge> {
+  async create(tenantId: string, createChallengeDto: CreateChallengeDto) {
     // Validazione date
     if (new Date(createChallengeDto.start_date) >= new Date(createChallengeDto.end_date)) {
       throw new BadRequestException('End date must be after start date');
     }
 
-    const challenge = this.challengeRepository.create({
-      ...createChallengeDto,
-      tenant_owner_id: tenantId,
+    return this.prisma.challenge.create({
+      data: {
+        tenantOwnerId: tenantId,
+        title: createChallengeDto.title,
+        description: createChallengeDto.description || '',
+        challengeType: createChallengeDto.challenge_type,
+        challengeCategory: createChallengeDto.challenge_category || '',
+        localization: createChallengeDto.localization,
+        startDate: new Date(createChallengeDto.start_date),
+        endDate: new Date(createChallengeDto.end_date),
+        maxParticipants: createChallengeDto.max_participants,
+        entryFeePoints: createChallengeDto.entry_fee_points || 0,
+        geofenceRadius: createChallengeDto.geofence_radius,
+        rules: createChallengeDto.rules,
+        status: createChallengeDto.status || 'draft',
+      },
+      include: {
+        tenantOwner: {
+          select: {
+            businessName: true,
+            city: true,
+          }
+        }
+      }
     });
-    return this.challengeRepository.save(challenge);
   }
 
-  async findByTenant(tenantId: string): Promise<Challenge[]> {
-    return this.challengeRepository.find({
-      where: { tenant_owner_id: tenantId },
-      order: { created_at: 'DESC' },
+  async findByTenant(tenantId: string) {
+    return this.prisma.challenge.findMany({
+      where: { tenantOwnerId: tenantId },
+      include: {
+        _count: {
+          select: {
+            challengeParticipants: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
-  async updateStatus(challengeId: string, tenantId: string, status: string): Promise<Challenge> {
-    const challenge = await this.challengeRepository.findOne({
-      where: { id: challengeId, tenant_owner_id: tenantId },
+  async updateStatus(challengeId: string, tenantId: string, status: string) {
+    const challenge = await this.prisma.challenge.findFirst({
+      where: { 
+        id: challengeId, 
+        tenantOwnerId: tenantId 
+      },
     });
 
     if (!challenge) {
       throw new NotFoundException('Challenge not found');
     }
 
-    challenge.status = status;
-    return this.challengeRepository.save(challenge);
-  }
-
-  // USER CHALLENGE DISCOVERY & PARTICIPATION
-  async findAll(): Promise<Challenge[]> {
-    return this.challengeRepository.find({
-      where: { status: 'active', challenge_type: 'open' },
-      relations: ['tenant_owner'],
-      order: { created_at: 'DESC' },
+    return this.prisma.challenge.update({
+      where: { id: challengeId },
+      data: { status }
     });
   }
 
-  async findById(id: string): Promise<Challenge> {
-    const challenge = await this.challengeRepository.findOne({
+  // USER CHALLENGE DISCOVERY & PARTICIPATION
+  async findAll() {
+    return this.prisma.challenge.findMany({
+      where: { 
+        status: 'active', 
+        challengeType: 'open' 
+      },
+      include: {
+        tenantOwner: {
+          select: {
+            businessName: true,
+            city: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findById(id: string) {
+    const challenge = await this.prisma.challenge.findUnique({
       where: { id },
-      relations: ['tenant_owner'],
+      include: {
+        tenantOwner: {
+          select: {
+            businessName: true,
+            city: true,
+          }
+        }
+      },
     });
 
     if (!challenge) {
@@ -79,17 +121,20 @@ export class ChallengesService {
       throw new BadRequestException('Challenge is not active');
     }
 
-    if (challenge.challenge_type === 'close') {
+    if (challenge.challengeType === 'close') {
       throw new ForbiddenException('This is a private challenge');
     }
 
-    if (new Date() > new Date(challenge.end_date)) {
+    if (new Date() > new Date(challenge.endDate)) {
       throw new BadRequestException('Challenge has ended');
     }
 
     // Check se già partecipa
-    const existingParticipant = await this.participantRepository.findOne({
-      where: { challenge_id: challengeId, user_id: userId },
+    const existingParticipant = await this.prisma.challengeParticipant.findFirst({
+      where: { 
+        challengeId: challengeId, 
+        userId: userId 
+      },
     });
 
     if (existingParticipant) {
@@ -97,110 +142,150 @@ export class ChallengesService {
     }
 
     // Check limite partecipanti
-    if (challenge.max_participants) {
-      const currentParticipants = await this.participantRepository.count({
-        where: { challenge_id: challengeId },
+    if (challenge.maxParticipants) {
+      const currentParticipants = await this.prisma.challengeParticipant.count({
+        where: { challengeId: challengeId },
       });
 
-      if (currentParticipants >= challenge.max_participants) {
+      if (currentParticipants >= challenge.maxParticipants) {
         throw new BadRequestException('Challenge is full');
       }
     }
 
     // Crea partecipazione
-    const participant = this.participantRepository.create({
-      challenge_id: challengeId,
-      user_id: userId,
+    return this.prisma.challengeParticipant.create({
+      data: {
+        challengeId: challengeId,
+        userId: userId,
+      }
     });
-
-    return this.participantRepository.save(participant);
   }
 
   async leaveChallenge(challengeId: string, userId: string) {
-    const participant = await this.participantRepository.findOne({
-      where: { challenge_id: challengeId, user_id: userId },
+    const participant = await this.prisma.challengeParticipant.findFirst({
+      where: { 
+        challengeId: challengeId, 
+        userId: userId 
+      },
     });
 
     if (!participant) {
       throw new NotFoundException('Not participating in this challenge');
     }
 
-    if (participant.completion_status !== 'active') {
+    if (participant.completionStatus !== 'active') {
       throw new BadRequestException('Cannot leave completed/abandoned challenge');
     }
 
-    participant.completion_status = 'abandoned';
-    return this.participantRepository.save(participant);
+    return this.prisma.challengeParticipant.update({
+      where: { id: participant.id },
+      data: { completionStatus: 'abandoned' }
+    });
   }
 
   // SCORING & LEADERBOARD
   async updateParticipantScore(challengeId: string, userId: string, pointsToAdd: number) {
-    const participant = await this.participantRepository.findOne({
-      where: { challenge_id: challengeId, user_id: userId, completion_status: 'active' },
+    const participant = await this.prisma.challengeParticipant.findFirst({
+      where: { 
+        challengeId: challengeId, 
+        userId: userId, 
+        completionStatus: 'active' 
+      },
     });
 
     if (!participant) {
       throw new NotFoundException('User not participating in active challenge');
     }
 
-    participant.current_score += pointsToAdd;
-    return this.participantRepository.save(participant);
+    return this.prisma.challengeParticipant.update({
+      where: { id: participant.id },
+      data: { 
+        currentScore: {
+          increment: pointsToAdd
+        }
+      }
+    });
   }
 
   async getChallengeLeaderboard(challengeId: string, limit: number = 50) {
-    return this.participantRepository
-      .createQueryBuilder('participant')
-      .select([
-        'participant.id',
-        'participant.current_score',
-        'participant.completion_status',
-        'user.id',
-        'user.username',
-        'user.avatar_url'
-      ])
-      .leftJoin('participant.user', 'user')
-      .where('participant.challenge_id = :challengeId', { challengeId })
-      .andWhere('participant.completion_status = :status', { status: 'active' })
-      .orderBy('participant.current_score', 'DESC')
-      .limit(limit)
-      .cache(60000) // Cache 1 minuto
-      .getMany();
+    return this.prisma.challengeParticipant.findMany({
+      where: { 
+        challengeId: challengeId,
+        completionStatus: 'active'
+      },
+      select: {
+        id: true,
+        currentScore: true,
+        completionStatus: true,
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true
+          }
+        }
+      },
+      orderBy: { currentScore: 'desc' },
+      take: limit
+    });
   }
 
   async getUserChallenges(userId: string) {
-    return this.participantRepository.find({
-      where: { user_id: userId },
-      relations: ['challenge', 'challenge.tenant_owner'],
-      order: { joined_at: 'DESC' },
+    return this.prisma.challengeParticipant.findMany({
+      where: { userId: userId },
+      include: {
+        challenge: {
+          include: {
+            tenantOwner: {
+              select: {
+                businessName: true,
+                city: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: { joinedAt: 'desc' },
     });
   }
 
   // CHALLENGE COMPLETION
   async completeChallenge(challengeId: string, tenantId: string) {
-    const challenge = await this.challengeRepository.findOne({
-      where: { id: challengeId, tenant_owner_id: tenantId },
+    const challenge = await this.prisma.challenge.findFirst({
+      where: { 
+        id: challengeId, 
+        tenantOwnerId: tenantId 
+      },
     });
 
     if (!challenge) {
       throw new NotFoundException('Challenge not found');
     }
 
-    // Calcola ranking finale
-    const participants = await this.participantRepository.find({
-      where: { challenge_id: challengeId, completion_status: 'active' },
-      order: { current_score: 'DESC' },
+    // Get all active participants ordered by score
+    const participants = await this.prisma.challengeParticipant.findMany({
+      where: { 
+        challengeId: challengeId, 
+        completionStatus: 'active' 
+      },
+      orderBy: { currentScore: 'desc' },
     });
 
-    // Assegna final_ranking
+    // Update participants with final ranking
     for (let i = 0; i < participants.length; i++) {
-      participants[i].final_ranking = i + 1;
-      participants[i].completion_status = 'completed';
+      await this.prisma.challengeParticipant.update({
+        where: { id: participants[i].id },
+        data: {
+          finalRanking: i + 1,
+          completionStatus: 'completed'
+        }
+      });
     }
 
-    await this.participantRepository.save(participants);
-
-    // Aggiorna status challenge
-    challenge.status = 'completed';
-    return this.challengeRepository.save(challenge);
+    // Update challenge status
+    return this.prisma.challenge.update({
+      where: { id: challengeId },
+      data: { status: 'completed' }
+    });
   }
 }

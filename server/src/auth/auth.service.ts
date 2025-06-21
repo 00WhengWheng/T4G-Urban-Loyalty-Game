@@ -138,7 +138,7 @@ export class AuthService {
       }
 
       // Verify password
-      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
       if (!isPasswordValid) {
         await this.logFailedLogin(cleanEmail, 'user', metadata);
         throw new UnauthorizedException('Invalid credentials');
@@ -254,7 +254,7 @@ export class AuthService {
       this.eventEmitter.emit('tenant.registered', {
         tenantId: tenant.id,
         email: tenant.email,
-        businessName: tenant.business_name,
+        businessName: tenant.businessName,
         metadata,
       });
 
@@ -289,7 +289,7 @@ export class AuthService {
       }
 
       // Verify password
-      const isPasswordValid = await bcrypt.compare(password, tenant.password_hash);
+      const isPasswordValid = await bcrypt.compare(password, tenant.passwordHash);
       if (!isPasswordValid) {
         await this.logFailedLogin(cleanEmail, 'tenant', metadata);
         throw new UnauthorizedException('Invalid credentials');
@@ -315,7 +315,7 @@ export class AuthService {
       this.eventEmitter.emit('tenant.login', {
         tenantId: tenant.id,
         email: tenant.email,
-        businessName: tenant.business_name,
+        businessName: tenant.businessName,
         metadata,
       });
 

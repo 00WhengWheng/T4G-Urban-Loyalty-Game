@@ -1,19 +1,17 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { NfcController } from './nfcs.controller';
 import { NfcService } from './nfcs.service';
-import { NfcTag } from './nfc-tag.entity';
-import { NfcScan } from './nfc-scan.entity';
-import { User } from '../users/user.entity';
-import { Tenant } from '../tenants/tenant.entity';
+import { PrismaModule } from '../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
+import { TenantsModule } from '../tenants/tenants.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { RedisModule } from '../common/redis.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([NfcTag, NfcScan, User, Tenant]),
+    PrismaModule,
     UsersModule,
+    TenantsModule,
     ScoringModule,
     RedisModule,
   ],

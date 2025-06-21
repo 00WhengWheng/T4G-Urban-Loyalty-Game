@@ -46,6 +46,7 @@
     "@nestjs/swagger": "^7.4.2",
     "@nestjs/throttler": "^6.4.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@prisma/client": "^6.10.1",
     "bcryptjs": "^3.0.2",
     "bull": "^4.16.5",
     "cache-manager": "^5.7.6",
@@ -137,6 +138,6 @@
     "npm": ">=9.0.0"
   },
   "prisma": {
-    "schema": "src/prisma/schema.prisma"
+    "schema": "prisma/schema.prisma"
   }
 }

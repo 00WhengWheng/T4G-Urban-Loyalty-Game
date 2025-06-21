@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, Query } from '@nestjs/common';
 import { TokensService } from './tokens.service';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
@@ -8,8 +8,8 @@ export class TokensController {
   constructor(private readonly tokensService: TokensService) {}
 
   @Post()
-  create(@Body() createTokenDto: CreateTokenDto) {
-    return this.tokensService.create(createTokenDto);
+  create(@Body() createTokenDto: CreateTokenDto, @Query('tenantId') tenantId: string) {
+    return this.tokensService.create(tenantId, createTokenDto);
   }
 
   @Get()
@@ -23,12 +23,12 @@ export class TokensController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateTokenDto: UpdateTokenDto) {
-    return this.tokensService.update(id, updateTokenDto);
+  update(@Param('id') id: string, @Body() updateTokenDto: UpdateTokenDto, @Query('tenantId') tenantId: string) {
+    return this.tokensService.update(id, tenantId, updateTokenDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.tokensService.remove(id);
+  remove(@Param('id') id: string, @Query('tenantId') tenantId: string) {
+    return this.tokensService.remove(id, tenantId);
   }
 }

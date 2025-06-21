@@ -12,6 +12,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 // Core Modules
+import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -21,20 +22,6 @@ import { NfcsModule } from './nfcs/nfcs.module';
 import { TokensModule } from './tokens/tokens.module';
 import { SharesModule } from './shares/shares.module';
 import { ScoringModule } from './scoring/scoring.module';
-import { DatabaseModule } from './database/database.module';
-
-// Entities
-import { User } from './users/user.entity';
-import { Tenant } from './tenants/tenant.entity';
-import { Challenge } from './challenges/challenge.entity';
-import { ChallengeParticipant } from './challenges/challenge-participant.entity';
-import { NfcTag } from './nfcs/nfc-tag.entity';
-import { NfcScan } from './nfcs/nfc-scan.entity';
-import { Token } from './tokens/token.entity';
-import { TokenClaim } from './tokens/token-claim.entity';
-import { Game } from './games/game.entity';
-import { GameAttempt } from './games/game-attempt.entity';
-import { Share } from './shares/share.entity';
 
 // Configuration validation schema
 import * as Joi from 'joi';
@@ -123,6 +110,7 @@ const configValidationSchema = Joi.object({
     ScheduleModule.forRoot(),
 
     // Application Modules
+    PrismaModule,
     AuthModule,
     UsersModule,
     TenantsModule,
@@ -132,7 +120,6 @@ const configValidationSchema = Joi.object({
     TokensModule,
     SharesModule,
     ScoringModule,
-    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

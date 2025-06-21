@@ -4,17 +4,28 @@ export class CreateNfcScanDto {
   @IsString()
   tag_identifier: string;
 
+  @IsOptional()
   @IsNumber()
-  user_latitude: number;
+  user_latitude?: number;
 
+  @IsOptional()
   @IsNumber()
-  user_longitude: number;
+  user_longitude?: number;
 
   @IsOptional()
   @IsObject()
-  device_info?: any;
+  scan_location?: {
+    latitude?: number;
+    longitude?: number;
+    accuracy?: number;
+    timestamp?: string;
+  };
 
   @IsOptional()
-  @IsString()
-  ip_address?: string;
+  @IsObject()
+  device_info?: {
+    userAgent?: string;
+    platform?: string;
+    appVersion?: string;
+  };
 }

@@ -1,26 +1,23 @@
 import { Injectable, Logger, BadRequestException, ForbiddenException, NotFoundException, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import Redis from 'ioredis';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NfcScan } from './nfc-scan.entity';
-import { NfcTag } from './nfc-tag.entity';
-import { User } from '../users/user.entity';
-import { Tenant } from '../tenants/tenant.entity';
+import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
+import { TenantsService } from '../tenants/tenants.service';
 import { ScoringService } from '../scoring/scoring.service';
-
 import { CreateNfcTagDto } from './dto/create-nfc-tag.dto';
 import { CreateNfcScanDto } from './dto/create-nfc-scan.dto';
 
 export interface ScanResult {
   success: boolean;
   points_awarded: number;
-  nfc_tag: NfcTag;
+  nfc_tag: any;
   scan_id: string;
+  message: string;
 }
 
-interface PaginatedNFCTags {
-  nfcTags: NfcTag[];
+export interface PaginatedNFCTags {
+  nfcTags: any[];
   total: number;
   page: number;
   limit: number;
@@ -29,266 +26,443 @@ interface PaginatedNFCTags {
 
 @Injectable()
 export class NfcService {
- private readonly logger = new Logger(NfcService.name);
+  private readonly logger = new Logger(NfcService.name);
 
- constructor(
-   @InjectRepository(NfcScan) private nfcScanRepository: Repository<NfcScan>,
-   @InjectRepository(NfcTag) private nfcTagRepository: Repository<NfcTag>,
-   @InjectRepository(User) private userRepository: Repository<User>,
-   @InjectRepository(Tenant) private tenantRepository: Repository<Tenant>,
-   @Inject('default_IORedisModuleConnectionToken') private redis: Redis,
-   private scoringService: ScoringService,
-   private eventEmitter: EventEmitter2,
- ) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usersService: UsersService,
+    private readonly tenantsService: TenantsService,
+    @Inject('default_IORedisModuleConnectionToken') private redis: Redis,
+    private scoringService: ScoringService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
- async createNFCTag(tenantId: string, createNFCDto: CreateNfcTagDto): Promise<NfcTag> {
-   const tenant = await this.tenantRepository.findOne({ where: { id: tenantId } });
-   if (!tenant) throw new NotFoundException('Tenant not found');
+  // TENANT NFC TAG MANAGEMENT
+  async createNFCTag(tenantId: string, createNFCDto: CreateNfcTagDto) {
+    // Validate tenant exists
+    const tenant = await this.tenantsService.findById(tenantId);
 
-   const nfcTag = this.nfcTagRepository.create({
-     ...createNFCDto,
-     tenant,
-     is_active: true,
-   });
+    // Check if tag identifier already exists
+    const existingTag = await this.prisma.nfcTag.findUnique({
+      where: { tagIdentifier: createNFCDto.tag_identifier }
+    });
 
-   return await this.nfcTagRepository.save(nfcTag);
- }
+    if (existingTag) {
+      throw new BadRequestException('NFC tag with this identifier already exists');
+    }
 
- async scanNFC(userId: string, scanData: CreateNfcScanDto): Promise<ScanResult> {
-   const { tag_identifier, user_latitude, user_longitude } = scanData;
+    // Validate coordinates if provided
+    if (createNFCDto.latitude && createNFCDto.longitude) {
+      if (!this.isValidCoordinate(createNFCDto.latitude, createNFCDto.longitude)) {
+        throw new BadRequestException('Invalid coordinates provided');
+      }
+    }
 
-   // Validazione coordinate
-   if (!this.isValidCoordinate(user_latitude, user_longitude)) {
-     throw new BadRequestException('Invalid coordinates');
-   }
+    const nfcTag = await this.prisma.nfcTag.create({
+      data: {
+        tenantId,
+        tagIdentifier: createNFCDto.tag_identifier,
+        tagLocation: createNFCDto.tag_location,
+        latitude: createNFCDto.latitude,
+        longitude: createNFCDto.longitude,
+        pointsPerScan: createNFCDto.points_per_scan,
+        maxDailyScans: createNFCDto.max_daily_scans,
+        maxTotalScans: createNFCDto.max_total_scans,
+        scanRadius: createNFCDto.scan_radius,
+        isActive: createNFCDto.is_active ?? true,
+      },
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            businessName: true,
+            city: true,
+          }
+        }
+      }
+    });
 
-   // Rate limiting avanzato
-   await this.advancedRateLimit(userId, tag_identifier, scanData.ip_address);
+    this.logger.log(`NFC tag created: ${nfcTag.tagIdentifier} for tenant ${tenantId}`);
 
-   // Trova NFC tag
-   const nfcTag = await this.nfcTagRepository.findOne({
-     where: { tag_identifier, is_active: true },
-     relations: ['tenant'],
-   });
+    // Emit event
+    this.eventEmitter.emit('nfc.tag.created', {
+      tagId: nfcTag.id,
+      tenantId,
+      tagIdentifier: nfcTag.tagIdentifier,
+    });
 
-   if (!nfcTag) {
-     throw new NotFoundException('NFC tag not found or inactive');
-   }
+    return nfcTag;
+  }
 
-   // Controllo cooldown
-   await this.checkCooldown(userId, tag_identifier);
+  async getTenantNFCTags(tenantId: string, page: number = 1, limit: number = 20): Promise<PaginatedNFCTags> {
+    const tenant = await this.tenantsService.findById(tenantId);
 
-   // Registra scan
-   const scan = await this.createScan(userId, nfcTag, scanData);
+    const skip = (page - 1) * limit;
 
-   // Assegna punti
-   const points = nfcTag.points_per_scan || 10;
-   await this.scoringService.awardNfcScanPoints(userId, points);
+    const [nfcTags, total] = await Promise.all([
+      this.prisma.nfcTag.findMany({
+        where: { tenantId },
+        include: {
+          _count: {
+            select: {
+              nfcScans: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.nfcTag.count({
+        where: { tenantId }
+      })
+    ]);
 
-   // Imposta cooldown
-   await this.setCooldown(userId, tag_identifier);
+    return {
+      nfcTags,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 
-   // Emetti evento
-   this.eventEmitter.emit('nfc.scanned', {
-     userId, nfcTagId: nfcTag.id, points
-   });
+  async updateNFCTag(tagId: string, tenantId: string, updateData: Partial<CreateNfcTagDto>) {
+    // Verify tag belongs to tenant
+    const tag = await this.prisma.nfcTag.findFirst({
+      where: { id: tagId, tenantId }
+    });
 
-   return {
-     success: true,
-     points_awarded: points,
-     nfc_tag: nfcTag,
-     scan_id: scan.id,
-   };
- }
+    if (!tag) {
+      throw new NotFoundException('NFC tag not found');
+    }
 
- async getNFCTagsByTenant(tenantId: string, page: number = 1, limit: number = 20): Promise<PaginatedNFCTags> {
-   const [nfcTags, total] = await this.nfcTagRepository.findAndCount({
-     where: { tenant: { id: tenantId } },
-     relations: ['tenant'],
-     skip: (page - 1) * limit,
-     take: limit,
-     order: { created_at: 'DESC' },
-   });
+    // Validate coordinates if provided
+    if (updateData.latitude && updateData.longitude) {
+      if (!this.isValidCoordinate(updateData.latitude, updateData.longitude)) {
+        throw new BadRequestException('Invalid coordinates provided');
+      }
+    }
 
-   return { nfcTags, total, page, limit, totalPages: Math.ceil(total / limit) };
- }
+    return this.prisma.nfcTag.update({
+      where: { id: tagId },
+      data: {
+        tagLocation: updateData.tag_location,
+        latitude: updateData.latitude,
+        longitude: updateData.longitude,
+        pointsPerScan: updateData.points_per_scan,
+        maxDailyScans: updateData.max_daily_scans,
+        maxTotalScans: updateData.max_total_scans,
+        scanRadius: updateData.scan_radius,
+        isActive: updateData.is_active,
+      }
+    });
+  }
 
- // Methods expected by controller
- async scanNfcTag(userId: string, scanData: CreateNfcScanDto): Promise<ScanResult> {
-   return this.scanNFC(userId, scanData);
- }
+  async deleteNFCTag(tagId: string, tenantId: string) {
+    // Verify tag belongs to tenant
+    const tag = await this.prisma.nfcTag.findFirst({
+      where: { id: tagId, tenantId }
+    });
 
- async getUserScanHistory(userId: string, limit: number = 50) {
-   const scans = await this.nfcScanRepository.find({
-     where: { user: { id: userId } },
-     relations: ['nfc_tag', 'tenant'],
-     order: { scan_timestamp: 'DESC' },
-     take: limit,
-   });
+    if (!tag) {
+      throw new NotFoundException('NFC tag not found');
+    }
 
-   return { scans, total: scans.length };
- }
+    // Check if tag has scans (optional: prevent deletion if it has scan history)
+    const scanCount = await this.prisma.nfcScan.count({
+      where: { nfcTagId: tagId }
+    });
 
- async createNfcTag(tenantId: string, createTagDto: CreateNfcTagDto): Promise<NfcTag> {
-   return this.createNFCTag(tenantId, createTagDto);
- }
+    if (scanCount > 0) {
+      // Soft delete - just deactivate
+      return this.prisma.nfcTag.update({
+        where: { id: tagId },
+        data: { isActive: false }
+      });
+    }
 
- async getTenantTags(tenantId: string) {
-   const tags = await this.nfcTagRepository.find({
-     where: { tenant: { id: tenantId } },
-     relations: ['tenant'],
-     order: { created_at: 'DESC' },
-   });
+    // Hard delete if no scans
+    return this.prisma.nfcTag.delete({
+      where: { id: tagId }
+    });
+  }
 
-   return { tags };
- }
+  // USER NFC SCANNING
+  async scanNFCTag(userId: string, scanDto: CreateNfcScanDto): Promise<ScanResult> {
+    this.logger.log(`NFC scan attempt: ${scanDto.tag_identifier} by user ${userId}`);
 
- async updateNfcTag(tagId: string, tenantId: string, updateData: Partial<CreateNfcTagDto>): Promise<NfcTag> {
-   const tag = await this.nfcTagRepository.findOne({
-     where: { id: tagId, tenant: { id: tenantId } },
-     relations: ['tenant'],
-   });
+    // Find NFC tag
+    const nfcTag = await this.prisma.nfcTag.findUnique({
+      where: { tagIdentifier: scanDto.tag_identifier },
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            businessName: true,
+            city: true,
+          }
+        }
+      }
+    });
 
-   if (!tag) {
-     throw new NotFoundException('NFC tag not found');
-   }
+    if (!nfcTag || !nfcTag.isActive) {
+      throw new NotFoundException('NFC tag not found or inactive');
+    }
 
-   Object.assign(tag, updateData);
-   return await this.nfcTagRepository.save(tag);
- }
+    // Validate user
+    const user = await this.usersService.findById(userId);
 
- async deleteNfcTag(tagId: string, tenantId: string): Promise<void> {
-   const tag = await this.nfcTagRepository.findOne({
-     where: { id: tagId, tenant: { id: tenantId } },
-   });
+    // Check location proximity if coordinates are provided
+    if (scanDto.scan_location?.latitude && scanDto.scan_location?.longitude && 
+        nfcTag.latitude && nfcTag.longitude) {
+      const distance = this.calculateDistance(
+        Number(nfcTag.latitude),
+        Number(nfcTag.longitude),
+        scanDto.scan_location.latitude,
+        scanDto.scan_location.longitude
+      );
 
-   if (!tag) {
-     throw new NotFoundException('NFC tag not found');
-   }
+      if (distance > nfcTag.scanRadius) {
+        throw new BadRequestException(`You must be within ${nfcTag.scanRadius}m of the NFC tag to scan it`);
+      }
+    }
 
-   await this.nfcTagRepository.remove(tag);
- }
+    // Check daily scan limit
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dailyScans = await this.prisma.nfcScan.count({
+      where: {
+        nfcTagId: nfcTag.id,
+        userId,
+        scanTime: {
+          gte: today,
+        },
+      },
+    });
 
- async getTenantScanStats(tenantId: string, days: number = 30) {
-   const startDate = new Date();
-   startDate.setDate(startDate.getDate() - days);
+    if (dailyScans >= nfcTag.maxDailyScans) {
+      throw new BadRequestException(`Maximum ${nfcTag.maxDailyScans} scans per day reached for this tag`);
+    }
 
-   const scans = await this.nfcScanRepository
-     .createQueryBuilder('scan')
-     .innerJoin('scan.nfc_tag', 'tag')
-     .where('tag.tenant_id = :tenantId', { tenantId })
-     .andWhere('scan.scan_timestamp >= :startDate', { startDate })
-     .getCount();
+    // Check total scan limit
+    const totalScans = await this.prisma.nfcScan.count({
+      where: {
+        nfcTagId: nfcTag.id,
+        userId,
+      },
+    });
 
-   const totalPoints = await this.nfcScanRepository
-     .createQueryBuilder('scan')
-     .innerJoin('scan.nfc_tag', 'tag')
-     .where('tag.tenant_id = :tenantId', { tenantId })
-     .andWhere('scan.scan_timestamp >= :startDate', { startDate })
-     .select('SUM(scan.points_earned)', 'total')
-     .getRawOne();
+    if (totalScans >= nfcTag.maxTotalScans) {
+      throw new BadRequestException(`Maximum ${nfcTag.maxTotalScans} total scans reached for this tag`);
+    }
 
-   return {
-     total_scans: scans,
-     total_points_awarded: parseInt(totalPoints.total) || 0,
-     period_days: days,
-   };
- }
+    // Check rate limiting (prevent rapid scanning)
+    const rateLimitKey = `nfc_scan_rate:${userId}:${nfcTag.id}`;
+    const lastScan = await this.redis.get(rateLimitKey);
+    
+    if (lastScan) {
+      throw new BadRequestException('Please wait before scanning this tag again');
+    }
 
- async getTagScanCount(tagId: string) {
-   const count = await this.nfcScanRepository.count({
-     where: { nfc_tag: { id: tagId } },
-   });
+    // Perform the scan in a transaction
+    const scan = await this.prisma.$transaction(async (tx) => {
+      // Create scan record
+      const scanRecord = await tx.nfcScan.create({
+        data: {
+          nfcTagId: nfcTag.id,
+          userId,
+          pointsEarned: nfcTag.pointsPerScan,
+          scanLocation: scanDto.scan_location as any,
+        },
+        include: {
+          nfcTag: {
+            include: {
+              tenant: true
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              username: true,
+              totalPoints: true,
+            }
+          }
+        }
+      });
 
-   return { scan_count: count };
- }
+      // Award points to user
+      await this.scoringService.awardPoints(userId, nfcTag.pointsPerScan, `NFC scan: ${nfcTag.tagIdentifier}`);
 
- private async advancedRateLimit(userId: string, tagId: string, ip?: string): Promise<void> {
-   const userKey = `nfc:limit:user:${userId}`;
-   const tagKey = `nfc:limit:tag:${tagId}`;
-   
-   const promises = [
-     this.redis.get(userKey),
-     this.redis.get(tagKey)
-   ];
-   
-   let ipKey: string | null = null;
-   if (ip) {
-     ipKey = `nfc:limit:ip:${ip}`;
-     promises.push(this.redis.get(ipKey));
-   }
+      return scanRecord;
+    });
 
-   const results = await Promise.all(promises);
-   const [userCount, tagCount, ipCount] = results;
+    // Set rate limit (5 seconds)
+    await this.redis.setex(rateLimitKey, 5, Date.now().toString());
 
-   if (parseInt(userCount || '0') >= 50) throw new ForbiddenException('User daily limit');
-   if (parseInt(tagCount || '0') >= 1000) throw new ForbiddenException('Tag overloaded');
-   if (ip && parseInt(ipCount || '0') >= 200) throw new ForbiddenException('IP rate limit');
+    // Emit events
+    this.eventEmitter.emit('nfc.scanned', {
+      scanId: scan.id,
+      userId,
+      tagId: nfcTag.id,
+      tenantId: nfcTag.tenantId,
+      pointsEarned: nfcTag.pointsPerScan,
+    });
 
-   const updatePromises = [
-     this.redis.incr(userKey), this.redis.expire(userKey, 86400),
-     this.redis.incr(tagKey), this.redis.expire(tagKey, 86400)
-   ];
-   
-   if (ip && ipKey) {
-     updatePromises.push(this.redis.incr(ipKey), this.redis.expire(ipKey, 86400));
-   }
-   
-   await Promise.all(updatePromises);
- }
+    this.logger.log(`NFC scan successful: ${scan.id}, ${nfcTag.pointsPerScan} points awarded`);
 
- private async checkCooldown(userId: string, tagId: string): Promise<void> {
-   const cooldownKey = `nfc:cooldown:${userId}:${tagId}`;
-   const cooldown = await this.redis.get(cooldownKey);
+    return {
+      success: true,
+      points_awarded: nfcTag.pointsPerScan,
+      nfc_tag: {
+        id: nfcTag.id,
+        tag_identifier: nfcTag.tagIdentifier,
+        location: nfcTag.tagLocation,
+        tenant: nfcTag.tenant,
+      },
+      scan_id: scan.id,
+      message: `Successfully scanned! You earned ${nfcTag.pointsPerScan} points.`,
+    };
+  }
 
-   if (cooldown) {
-     const remaining = Math.ceil((parseInt(cooldown) - Date.now()) / 1000);
-     throw new ForbiddenException(`Cooldown active. ${remaining}s remaining`);
-   }
- }
+  async getUserScanHistory(userId: string, limit: number = 50) {
+    return this.prisma.nfcScan.findMany({
+      where: { userId },
+      include: {
+        nfcTag: {
+          include: {
+            tenant: {
+              select: {
+                id: true,
+                businessName: true,
+                city: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: { scanTime: 'desc' },
+      take: limit,
+    });
+  }
 
- private async setCooldown(userId: string, tagId: string): Promise<void> {
-   const cooldownKey = `nfc:cooldown:${userId}:${tagId}`;
-   const duration = 300; // 5 minuti
-   await this.redis.setex(cooldownKey, duration, (Date.now() + duration * 1000).toString());
- }
+  async getNFCTagStats(tagId: string, tenantId: string) {
+    // Verify tag belongs to tenant
+    const tag = await this.prisma.nfcTag.findFirst({
+      where: { id: tagId, tenantId }
+    });
 
- private async createScan(userId: string, nfcTag: NfcTag, scanData: CreateNfcScanDto): Promise<NfcScan> {
-   const user = await this.userRepository.findOne({ where: { id: userId } });
-   if (!user) throw new NotFoundException('User not found');
+    if (!tag) {
+      throw new NotFoundException('NFC tag not found');
+    }
 
-   const scan = this.nfcScanRepository.create({
-     user,
-     nfc_tag: nfcTag,
-     tenant: nfcTag.tenant,
-     points_earned: nfcTag.points_per_scan,
-     user_latitude: scanData.user_latitude,
-     user_longitude: scanData.user_longitude,
-     is_valid: true,
-     ip_address: scanData.ip_address,
-     device_info: scanData.device_info,
-   });
+    const [totalScans, uniqueUsers, todayScans, totalPoints] = await Promise.all([
+      this.prisma.nfcScan.count({
+        where: { nfcTagId: tagId }
+      }),
+      this.prisma.nfcScan.findMany({
+        where: { nfcTagId: tagId },
+        distinct: ['userId'],
+        select: { userId: true }
+      }),
+      this.prisma.nfcScan.count({
+        where: {
+          nfcTagId: tagId,
+          scanTime: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
+      }),
+      this.prisma.nfcScan.aggregate({
+        where: { nfcTagId: tagId },
+        _sum: { pointsEarned: true }
+      })
+    ]);
 
-   return await this.nfcScanRepository.save(scan);
- }
+    return {
+      tag,
+      stats: {
+        totalScans,
+        uniqueUsers: uniqueUsers.length,
+        todayScans,
+        totalPointsAwarded: totalPoints._sum.pointsEarned || 0,
+        averagePointsPerScan: totalScans > 0 ? (totalPoints._sum.pointsEarned || 0) / totalScans : 0,
+      }
+    };
+  }
 
- private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-   const R = 6371000;
-   const dLat = this.deg2rad(lat2 - lat1);
-   const dLon = this.deg2rad(lon2 - lon1);
-   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-             Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
-             Math.sin(dLon / 2) * Math.sin(dLon / 2);
-   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-   return R * c;
- }
+  // UTILITY METHODS
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
 
- private deg2rad(deg: number): number {
-   return deg * (Math.PI / 180);
- }
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
- private isValidCoordinate(lat: number, lng: number): boolean {
-   return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 &&
-          !isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng);
- }
+    return R * c; // Distance in meters
+  }
+
+  private isValidCoordinate(lat: number, lng: number): boolean {
+    return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  }
+
+  async getTenantNFCStats(tenantId: string) {
+    const tenant = await this.tenantsService.findById(tenantId);
+
+    const [totalTags, activeTags, totalScans, totalPoints] = await Promise.all([
+      this.prisma.nfcTag.count({
+        where: { tenantId }
+      }),
+      this.prisma.nfcTag.count({
+        where: { tenantId, isActive: true }
+      }),
+      this.prisma.nfcScan.count({
+        where: {
+          nfcTag: { tenantId }
+        }
+      }),
+      this.prisma.nfcScan.aggregate({
+        where: {
+          nfcTag: { tenantId }
+        },
+        _sum: { pointsEarned: true }
+      })
+    ]);
+
+    return {
+      totalTags,
+      activeTags,
+      totalScans,
+      totalPointsAwarded: totalPoints._sum.pointsEarned || 0,
+    };
+  }
+
+  async getPopularNFCTags(limit: number = 10) {
+    return this.prisma.nfcTag.findMany({
+      include: {
+        tenant: {
+          select: {
+            businessName: true,
+            city: true,
+          }
+        },
+        _count: {
+          select: {
+            nfcScans: true
+          }
+        }
+      },
+      orderBy: {
+        nfcScans: {
+          _count: 'desc'
+        }
+      },
+      take: limit,
+    });
+  }
 }

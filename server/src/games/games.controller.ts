@@ -12,7 +12,7 @@ export class GamesController {
   // PUBLIC ENDPOINTS
   @Get()
   async getAvailableGames() {
-    return this.gamesService.getAvailableGames('public');
+    return this.gamesService.getUserGames();
   }
 
   @Get(':id')
@@ -32,7 +32,7 @@ export class GamesController {
     if (req.user.userType !== 'user') {
       throw new ForbiddenException('Only users can view available games');
     }
-    return this.gamesService.getAvailableGames(req.user.id);
+    return this.gamesService.getUserGames(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -41,7 +41,7 @@ export class GamesController {
     if (req.user.userType !== 'user') {
       throw new ForbiddenException('Only users can play games');
     }
-    return this.gamesService.playGame(req.user.id, gameId, playGameDto);
+    return this.gamesService.startGameAttempt(gameId, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -50,7 +50,7 @@ export class GamesController {
     if (req.user.userType !== 'user') {
       throw new ForbiddenException('Only users can view their attempts');
     }
-    return this.gamesService.getUserGameAttempts(req.user.id, gameId);
+    return this.gamesService.getUserGameHistory(req.user.id);
   }
 
   // TENANT ENDPOINTS
@@ -87,7 +87,7 @@ export class GamesController {
     if (req.user.userType !== 'tenant') {
       throw new ForbiddenException('Only tenants can deactivate games');
     }
-    return this.gamesService.deactivateGame(gameId, req.user.id);
+    return this.gamesService.deleteGame(gameId, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)

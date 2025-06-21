@@ -1,99 +1,142 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './user.entity';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly prisma: PrismaService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.userRepository.create(createUserDto);
-    return this.userRepository.save(user);
-  }
-
-  async findAll(): Promise<User[]> {
-    return this.userRepository.find({
-      select: ['id', 'email', 'username', 'first_name', 'last_name', 'total_points', 'level', 'status', 'created_at'],
-      order: { created_at: 'DESC' },
+  async create(createUserDto: CreateUserDto) {
+    return this.prisma.user.create({
+      data: {
+        email: createUserDto.email.toLowerCase(),
+        username: createUserDto.username,
+        passwordHash: createUserDto.password_hash || '',
+        firstName: createUserDto.first_name,
+        lastName: createUserDto.last_name,
+        avatarUrl: createUserDto.avatar_url,
+        phone: createUserDto.phone,
+        dateOfBirth: createUserDto.date_of_birth,
+      },
     });
   }
 
-  async findOne(id: string): Promise<User | undefined> {
-    const user = await this.userRepository.findOne({ 
+  async findAll() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        totalPoints: true,
+        level: true,
+        status: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOne(id: string) {
+    return this.prisma.user.findUnique({
       where: { id },
-      select: ['id', 'email', 'username', 'first_name', 'last_name', 'avatar_url', 'phone', 'date_of_birth', 'total_points', 'level', 'status', 'created_at', 'updated_at']
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        phone: true,
+        dateOfBirth: true,
+        totalPoints: true,
+        level: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
-    return user === null ? undefined : user;
   }
 
-  async findById(id: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
+  async findById(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
     return user;
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { email: email.toLowerCase() } });
+  async findByEmail(email: string) {
+    return this.prisma.user.findUnique({ 
+      where: { email: email.toLowerCase() } 
+    });
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { username } });
+  async findByUsername(username: string) {
+    return this.prisma.user.findUnique({ 
+      where: { username } 
+    });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User | null> {
+  async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id);
     if (!user) return null;
     
-    Object.assign(user, updateUserDto);
-    user.updated_at = new Date();
-    
-    return this.userRepository.save(user);
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        email: updateUserDto.email?.toLowerCase(),
+        username: updateUserDto.username,
+        passwordHash: updateUserDto.password_hash,
+        firstName: updateUserDto.first_name,
+        lastName: updateUserDto.last_name,
+        avatarUrl: updateUserDto.avatar_url,
+        phone: updateUserDto.phone,
+        dateOfBirth: updateUserDto.date_of_birth,
+      },
+    });
   }
 
-  async remove(id: string): Promise<User | null> {
+  async remove(id: string) {
     const user = await this.findOne(id);
     if (!user) return null;
     
-    return this.userRepository.remove(user);
+    return this.prisma.user.delete({
+      where: { id },
+    });
   }
 
-  async updatePoints(userId: string, points: number): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+  async updatePoints(userId: string, points: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     try {
-      user.total_points = (user.total_points || 0) + points;
+      const newTotalPoints = (user.totalPoints || 0) + points;
       
       // Update level based on points
-      const newLevel = this.calculateLevel(user.total_points);
-      if (newLevel > user.level) {
-        user.level = newLevel;
-      }
+      const newLevel = this.calculateLevel(newTotalPoints);
       
-      user.updated_at = new Date();
-      return await this.userRepository.save(user);
+      return await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          totalPoints: newTotalPoints,
+          level: Math.max(newLevel, user.level),
+        },
+      });
     } catch (error) {
       throw new InternalServerErrorException('Failed to update user points');
     }
   }
 
-  async getLeaderboard(limit: number = 10, timeframe: 'daily' | 'weekly' | 'monthly' | 'all-time' = 'all-time'): Promise<User[]> {
-    const queryBuilder = this.userRepository.createQueryBuilder('user')
-      .select(['user.id', 'user.username', 'user.first_name', 'user.last_name', 'user.avatar_url', 'user.total_points', 'user.level'])
-      .where('user.status = :status', { status: 'active' })
-      .orderBy('user.total_points', 'DESC')
-      .limit(limit);
+  async getLeaderboard(limit: number = 10, timeframe: 'daily' | 'weekly' | 'monthly' | 'all-time' = 'all-time') {
+    let where: any = { status: 'active' };
 
     if (timeframe !== 'all-time') {
       const date = new Date();
@@ -107,23 +150,36 @@ export class UsersService {
         date.setDate(1);
         date.setHours(0, 0, 0, 0);
       }
-      queryBuilder.andWhere('user.updated_at >= :date', { date });
+      where.updatedAt = { gte: date };
     }
 
-    return queryBuilder.getMany();
+    return this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        totalPoints: true,
+        level: true,
+      },
+      orderBy: { totalPoints: 'desc' },
+      take: limit,
+    });
   }
 
   async getUserRanking(userId: string): Promise<{ rank: number; total: number }> {
     const user = await this.findById(userId);
     
-    const higherRankedCount = await this.userRepository.count({
+    const higherRankedCount = await this.prisma.user.count({
       where: {
-        total_points: MoreThan(user.total_points),
+        totalPoints: { gt: user.totalPoints },
         status: 'active'
       }
     });
 
-    const totalUsers = await this.userRepository.count({
+    const totalUsers = await this.prisma.user.count({
       where: { status: 'active' }
     });
 
@@ -133,30 +189,30 @@ export class UsersService {
     };
   }
 
-  async updateStatus(id: string, status: string): Promise<User> {
+  async updateStatus(id: string, status: string) {
     const user = await this.findById(id);
-    user.status = status;
-    user.updated_at = new Date();
-    return this.userRepository.save(user);
+    return this.prisma.user.update({
+      where: { id },
+      data: { status }
+    });
   }
 
-  async updateProfile(id: string, profileData: Partial<UpdateUserDto>): Promise<User> {
+  async updateProfile(id: string, profileData: Partial<UpdateUserDto>) {
     const user = await this.findById(id);
     
     // Only update allowed profile fields
-    const allowedFields = ['first_name', 'last_name', 'avatar_url', 'phone', 'date_of_birth'];
-    const updateData = {};
+    const updateData: any = {};
     
-    allowedFields.forEach(field => {
-      if (profileData[field] !== undefined) {
-        updateData[field] = profileData[field];
-      }
+    if (profileData.first_name !== undefined) updateData.firstName = profileData.first_name;
+    if (profileData.last_name !== undefined) updateData.lastName = profileData.last_name;
+    if (profileData.avatar_url !== undefined) updateData.avatarUrl = profileData.avatar_url;
+    if (profileData.phone !== undefined) updateData.phone = profileData.phone;
+    if (profileData.date_of_birth !== undefined) updateData.dateOfBirth = profileData.date_of_birth;
+    
+    return this.prisma.user.update({
+      where: { id },
+      data: updateData
     });
-
-    Object.assign(user, updateData);
-    user.updated_at = new Date();
-    
-    return this.userRepository.save(user);
   }
 
   async getUserStats(userId: string): Promise<any> {
@@ -165,10 +221,10 @@ export class UsersService {
     
     // Calculate points needed for next level
     const nextLevelPoints = this.getPointsForLevel(user.level + 1);
-    const pointsToNextLevel = nextLevelPoints - user.total_points;
+    const pointsToNextLevel = nextLevelPoints - user.totalPoints;
 
     return {
-      currentPoints: user.total_points,
+      currentPoints: user.totalPoints,
       currentLevel: user.level,
       pointsToNextLevel: Math.max(0, pointsToNextLevel),
       ranking: ranking.rank,
@@ -177,76 +233,95 @@ export class UsersService {
     };
   }
 
-  async search(query: string, options?: { status?: string; minLevel?: number; maxLevel?: number }): Promise<User[]> {
-    const queryBuilder = this.userRepository.createQueryBuilder('user')
-      .select(['user.id', 'user.username', 'user.first_name', 'user.last_name', 'user.avatar_url', 'user.total_points', 'user.level']);
+  async search(query: string, options?: { status?: string; minLevel?: number; maxLevel?: number }) {
+    let where: any = {};
 
     if (query) {
-      queryBuilder.where(
-        'LOWER(user.username) LIKE LOWER(:query) OR LOWER(user.first_name) LIKE LOWER(:query) OR LOWER(user.last_name) LIKE LOWER(:query)',
-        { query: `%${query}%` }
-      );
+      where.OR = [
+        { username: { contains: query, mode: 'insensitive' } },
+        { firstName: { contains: query, mode: 'insensitive' } },
+        { lastName: { contains: query, mode: 'insensitive' } }
+      ];
     }
 
     if (options?.status) {
-      queryBuilder.andWhere('user.status = :status', { status: options.status });
+      where.status = options.status;
     } else {
-      queryBuilder.andWhere('user.status = :status', { status: 'active' });
+      where.status = 'active';
     }
 
     if (options?.minLevel) {
-      queryBuilder.andWhere('user.level >= :minLevel', { minLevel: options.minLevel });
+      where.level = { ...where.level, gte: options.minLevel };
     }
 
     if (options?.maxLevel) {
-      queryBuilder.andWhere('user.level <= :maxLevel', { maxLevel: options.maxLevel });
+      where.level = { ...where.level, lte: options.maxLevel };
     }
 
-    return queryBuilder
-      .orderBy('user.total_points', 'DESC')
-      .limit(50)
-      .getMany();
+    return this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        totalPoints: true,
+        level: true,
+      },
+      orderBy: { totalPoints: 'desc' },
+      take: 50,
+    });
   }
 
   async getActiveUsersCount(): Promise<number> {
-    return this.userRepository.count({ where: { status: 'active' } });
+    return this.prisma.user.count({ where: { status: 'active' } });
   }
 
   async getNewUsersCount(days: number = 7): Promise<number> {
     const date = new Date();
     date.setDate(date.getDate() - days);
     
-    return this.userRepository.count({
+    return this.prisma.user.count({
       where: {
-        created_at: MoreThan(date),
+        createdAt: { gt: date },
         status: 'active'
       }
     });
   }
 
   async getLevelDistribution(): Promise<any[]> {
-    return this.userRepository
-      .createQueryBuilder('user')
-      .select('user.level', 'level')
-      .addSelect('COUNT(*)', 'count')
-      .where('user.status = :status', { status: 'active' })
-      .groupBy('user.level')
-      .orderBy('user.level', 'ASC')
-      .getRawMany();
+    // Use raw query since groupBy is causing issues
+    return this.prisma.$queryRaw`
+      SELECT level, COUNT(*) as count 
+      FROM users 
+      WHERE status = 'active' 
+      GROUP BY level 
+      ORDER BY level ASC
+    `;
   }
 
-  async getTopPointsEarners(days: number = 30, limit: number = 10): Promise<User[]> {
+  async getTopPointsEarners(days: number = 30, limit: number = 10) {
     const date = new Date();
     date.setDate(date.getDate() - days);
 
-    return this.userRepository
-      .createQueryBuilder('user')
-      .select(['user.id', 'user.username', 'user.first_name', 'user.last_name', 'user.avatar_url', 'user.total_points', 'user.level'])
-      .where('user.status = :status', { status: 'active' })
-      .andWhere('user.updated_at >= :date', { date })
-      .orderBy('user.total_points', 'DESC')
-      .limit(limit)
-      .getMany();
+    return this.prisma.user.findMany({
+      where: {
+        status: 'active',
+        updatedAt: { gte: date }
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        totalPoints: true,
+        level: true,
+      },
+      orderBy: { totalPoints: 'desc' },
+      take: limit,
+    });
   }
 
   async validateUserData(data: Partial<CreateUserDto>): Promise<boolean> {
