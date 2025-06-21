@@ -42,8 +42,8 @@ export class AuthService {
   // ============================================================================
 
   async registerUser(createUserDto: CreateUserDto, metadata?: { ip: string; userAgent: string }) {
-    // Development bypass
-    if (this.configService.get('NODE_ENV') === 'development') {
+    // Development bypass - DISABLED for testing real users
+    if (false && this.configService.get('NODE_ENV') === 'development') {
       this.logger.warn('⚠️ [DEV] User registration bypass enabled');
       return this.createDevUserResponse(createUserDto);
     }
@@ -120,8 +120,8 @@ export class AuthService {
   async loginUser(email: string, password: string, metadata?: { ip: string; userAgent: string }) {
     const cleanEmail = email.toLowerCase().trim();
 
-    // Development bypass
-    if (this.configService.get('NODE_ENV') === 'development') {
+    // Development bypass - DISABLED for testing real users
+    if (false && this.configService.get('NODE_ENV') === 'development') {
       this.logger.warn('🧪 [DEV] User login bypass enabled');
       return this.createDevUserResponse({ email: cleanEmail } as CreateUserDto);
     }

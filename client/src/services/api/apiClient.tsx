@@ -23,9 +23,6 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
-    // Add request timestamp for debugging
-    config.metadata = { startTime: new Date() };
     
     return config;
   },
@@ -37,11 +34,9 @@ apiClient.interceptors.request.use(
 // Response interceptor
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Log request time in development
+    // Log request in development
     if (import.meta.env.DEV) {
-      const endTime = new Date();
-      const duration = endTime.getTime() - response.config.metadata?.startTime?.getTime();
-      console.log(`API Request: ${response.config.method?.toUpperCase()} ${response.config.url} - ${duration}ms`);
+      console.log(`API Request: ${response.config.method?.toUpperCase()} ${response.config.url}`);
     }
 
     return response;

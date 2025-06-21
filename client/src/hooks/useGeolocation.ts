@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 // hooks/useGeolocation.ts
 export const useGeolocation = () => {
   const [location, setLocation] = useState<[number, number] | null>(null);

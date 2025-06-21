@@ -1,6 +1,7 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
+import { Card } from './Card';
 
 // Stats Card Component
 interface StatsCardProps {

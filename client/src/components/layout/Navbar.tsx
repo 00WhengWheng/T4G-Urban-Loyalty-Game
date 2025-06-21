@@ -73,9 +73,9 @@ export const Navbar: React.FC = () => {
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                {user?.avatar_url ? (
+                {false ? (
                   <img 
-                    src={user.avatar_url} 
+                    src="" 
                     alt="Avatar" 
                     className="w-8 h-8 rounded-full object-cover"
                   />

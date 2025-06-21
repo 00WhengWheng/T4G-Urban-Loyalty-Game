@@ -102,6 +102,16 @@ function App() {
 
             {/* Protected Routes */}
             <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <DashboardPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/landingpage" 
               element={
                 <ProtectedRoute>
@@ -183,7 +193,7 @@ function App() {
             />
 
             {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/landingpage" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             
             {/* 404 fallback */}
             <Route 

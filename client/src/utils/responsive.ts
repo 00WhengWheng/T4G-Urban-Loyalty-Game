@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 // utils/responsive.ts
 export const breakpoints = {
   sm: 640,
