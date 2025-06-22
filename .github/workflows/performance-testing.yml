@@ -53,7 +53,7 @@ jobs:
                  api-load-test.js
 
       - name: 📊 Upload performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-results
           path: tests/performance/results/
@@ -82,7 +82,7 @@ jobs:
           LHCI_SERVER_BASE_URL: ${{ secrets.STAGING_URL }}
 
       - name: 📊 Upload Lighthouse results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lighthouse-results
           path: .lighthouseci/
@@ -118,7 +118,7 @@ jobs:
           node generate-report.js
 
       - name: 📤 Upload performance report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: database-performance-report
           path: tests/performance/reports/
