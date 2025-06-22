@@ -36,6 +36,13 @@ node_modules/
 */node_modules/
 .pnp
 .pnp.js
+
+# pnpm
+.pnpm-store/
+*/.pnpm-store/
+.pnpm/
+
+# Yarn
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml
