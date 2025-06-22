@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,246 +7,212 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-// Users table
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  username     String   @unique @db.VarChar(50)
-  passwordHash String   @map("password_hash")
-  firstName    String?  @map("first_name") @db.VarChar(100)
-  lastName     String?  @map("last_name") @db.VarChar(100)
-  avatarUrl    String?  @map("avatar_url") @db.VarChar(500)
-  phone        String?  @db.VarChar(20)
-  dateOfBirth  DateTime? @map("date_of_birth") @db.Date
-  totalPoints  Int      @default(0) @map("total_points")
-  level        Int      @default(1)
-  status       String   @default("active") @db.VarChar(20)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  gameAttempts         GameAttempt[]
-  nfcScans            NfcScan[]
-  shares              Share[]
+  id                    String                 @id @default(uuid())
+  email                 String                 @unique
+  username              String                 @unique @db.VarChar(50)
+  passwordHash          String                 @map("password_hash")
+  firstName             String?                @map("first_name") @db.VarChar(100)
+  lastName              String?                @map("last_name") @db.VarChar(100)
+  avatarUrl             String?                @map("avatar_url") @db.VarChar(500)
+  phone                 String?                @db.VarChar(20)
+  dateOfBirth           DateTime?              @map("date_of_birth") @db.Date
+  totalPoints           Int                    @default(0) @map("total_points")
+  level                 Int                    @default(1)
+  status                String                 @default("active") @db.VarChar(20)
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
   challengeParticipants ChallengeParticipant[]
-  tokenClaims         TokenClaim[]
+  gameAttempts          GameAttempt[]
+  nfcScans              NfcScan[]
+  shares                Share[]
+  tokenClaims           TokenClaim[]
 
   @@map("users")
 }
 
-// Tenants (businesses) table
 model Tenant {
-  id           String   @id @default(uuid())
-  businessName String   @map("business_name") @db.VarChar(200)
-  ownerName    String?  @map("owner_name") @db.VarChar(100)
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  phone        String?  @db.VarChar(20)
-  address      String?  @db.Text
-  city         String?  @db.VarChar(100)
-  postalCode   String?  @map("postal_code") @db.VarChar(20)
-  latitude     Decimal  @db.Decimal(10, 8)
-  longitude    Decimal  @db.Decimal(11, 8)
-  businessType String?  @map("business_type") @db.VarChar(50)
-  logoUrl      String?  @map("logo_url") @db.VarChar(500)
-  description  String?  @db.Text
-  website      String?  @db.VarChar(300)
-  instagram    String?  @db.VarChar(100)
-  facebook     String?  @db.VarChar(100)
-  status       String   @default("pending") @db.VarChar(20)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tokens      Token[]
-  games       Game[]
-  nfcTags     NfcTag[]
-  challenges  Challenge[]
+  id           String      @id @default(uuid())
+  businessName String      @map("business_name") @db.VarChar(200)
+  ownerName    String?     @map("owner_name") @db.VarChar(100)
+  email        String      @unique
+  passwordHash String      @map("password_hash")
+  phone        String?     @db.VarChar(20)
+  address      String?
+  city         String?     @db.VarChar(100)
+  postalCode   String?     @map("postal_code") @db.VarChar(20)
+  latitude     Decimal     @db.Decimal(10, 8)
+  longitude    Decimal     @db.Decimal(11, 8)
+  businessType String?     @map("business_type") @db.VarChar(50)
+  logoUrl      String?     @map("logo_url") @db.VarChar(500)
+  description  String?
+  website      String?     @db.VarChar(300)
+  instagram    String?     @db.VarChar(100)
+  facebook     String?     @db.VarChar(100)
+  status       String      @default("pending") @db.VarChar(20)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  challenges   Challenge[]
+  games        Game[]
+  nfcTags      NfcTag[]
+  tokens       Token[]
 
   @@map("tenants")
 }
 
-// Tokens (rewards) table
 model Token {
-  id               String   @id @default(uuid())
-  tenantId         String   @map("tenant_id")
-  tokenName        String   @map("token_name") @db.VarChar(200)
-  tokenDescription String?  @map("token_description") @db.Text
-  tokenValue       Decimal  @map("token_value") @db.Decimal(10, 2)
-  tokenType        String   @map("token_type") @db.VarChar(50)
-  requiredPoints   Int      @map("required_points")
-  quantityAvailable Int     @map("quantity_available")
-  quantityClaimed  Int      @default(0) @map("quantity_claimed")
-  expiryDate       DateTime? @map("expiry_date")
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tokenClaims TokenClaim[]
+  id                String       @id @default(uuid())
+  tenantId          String       @map("tenant_id")
+  tokenName         String       @map("token_name") @db.VarChar(200)
+  tokenDescription  String?      @map("token_description")
+  tokenValue        Decimal      @map("token_value") @db.Decimal(10, 2)
+  tokenType         String       @map("token_type") @db.VarChar(50)
+  requiredPoints    Int          @map("required_points")
+  quantityAvailable Int          @map("quantity_available")
+  quantityClaimed   Int          @default(0) @map("quantity_claimed")
+  expiryDate        DateTime?    @map("expiry_date")
+  isActive          Boolean      @default(true) @map("is_active")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  tokenClaims       TokenClaim[]
+  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tokens")
 }
 
-// Token claims table
 model TokenClaim {
-  id         String   @id @default(uuid())
-  tokenId    String   @map("token_id")
-  userId     String   @map("user_id")
-  claimCode  String   @unique @map("claim_code") @db.VarChar(20)
-  status     String   @default("claimed") @db.VarChar(20)
-  claimedAt  DateTime @default(now()) @map("claimed_at")
+  id         String    @id @default(uuid())
+  tokenId    String    @map("token_id")
+  userId     String    @map("user_id")
+  claimCode  String    @unique @map("claim_code") @db.VarChar(20)
+  status     String    @default("claimed") @db.VarChar(20)
+  claimedAt  DateTime  @default(now()) @map("claimed_at")
   redeemedAt DateTime? @map("redeemed_at")
-
-  // Relations
-  token Token @relation(fields: [tokenId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      Token     @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("token_claims")
 }
 
-// Games table
 model Game {
-  id                   String   @id @default(uuid())
-  tenantId             String   @map("tenant_id")
-  gameName             String   @map("game_name") @db.VarChar(200)
-  gameDescription      String?  @map("game_description") @db.Text
-  gameType             String   @map("game_type") @db.VarChar(50)
-  difficultyLevel      Int      @map("difficulty_level")
-  pointsPerCompletion  Int      @map("points_per_completion")
-  maxAttemptsPerUser   Int      @map("max_attempts_per_user")
-  timeLimitSeconds     Int?     @map("time_limit_seconds")
-  gameData             Json?    @map("game_data")
-  isActive             Boolean  @default(true) @map("is_active")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  gameAttempts GameAttempt[]
+  id                  String        @id @default(uuid())
+  tenantId            String        @map("tenant_id")
+  gameName            String        @default("Game") @map("game_name") @db.VarChar(200)
+  gameDescription     String?       @map("game_description")
+  gameType            String        @map("game_type") @db.VarChar(50)
+  difficultyLevel     Int           @map("difficulty_level")
+  pointsPerCompletion Int           @map("points_per_completion")
+  maxAttemptsPerUser  Int           @map("max_attempts_per_user")
+  timeLimitSeconds    Int?          @map("time_limit_seconds")
+  gameData            Json?         @map("game_data")
+  isActive            Boolean       @default(true) @map("is_active")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  gameAttempts        GameAttempt[]
+  tenant              Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("games")
 }
 
-// Game attempts table
 model GameAttempt {
-  id          String   @id @default(uuid())
-  gameId      String   @map("game_id")
-  userId      String   @map("user_id")
-  score       Int
-  completed   Boolean  @default(false)
-  pointsEarned Int     @map("points_earned")
-  attemptData Json?    @map("attempt_data")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  // Relations
-  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  gameId       String   @map("game_id")
+  userId       String   @map("user_id")
+  score        Int
+  completed    Boolean  @default(false)
+  pointsEarned Int      @map("points_earned")
+  attemptData  Json?    @map("attempt_data")
+  createdAt    DateTime @default(now()) @map("created_at")
+  game         Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("game_attempts")
 }
 
-// NFC Tags table
 model NfcTag {
-  id              String   @id @default(uuid())
-  tenantId        String   @map("tenant_id")
-  tagIdentifier   String   @unique @map("tag_identifier") @db.VarChar(100)
-  tagLocation     String?  @map("tag_location") @db.VarChar(300)
-  latitude        Decimal? @db.Decimal(10, 8)
-  longitude       Decimal? @db.Decimal(11, 8)
-  pointsPerScan   Int      @map("points_per_scan")
-  maxDailyScans   Int      @map("max_daily_scans")
-  maxTotalScans   Int      @map("max_total_scans")
-  scanRadius      Int      @map("scan_radius")
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  nfcScans NfcScan[]
+  id            String    @id @default(uuid())
+  tenantId      String    @map("tenant_id")
+  tagIdentifier String    @unique @map("tag_identifier") @db.VarChar(100)
+  tagLocation   String?   @map("tag_location") @db.VarChar(300)
+  latitude      Decimal?  @db.Decimal(10, 8)
+  longitude     Decimal?  @db.Decimal(11, 8)
+  pointsPerScan Int       @default(10) @map("points_per_scan")
+  maxDailyScans Int       @default(5) @map("max_daily_scans")
+  maxTotalScans Int       @default(50) @map("max_total_scans")
+  scanRadius    Int       @default(100) @map("scan_radius")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  nfcScans      NfcScan[]
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("nfc_tags")
 }
 
-// NFC Scans table
 model NfcScan {
-  id          String   @id @default(uuid())
-  nfcTagId    String   @map("nfc_tag_id")
-  userId      String   @map("user_id")
-  scanTime    DateTime @default(now()) @map("scan_time")
-  pointsEarned Int     @map("points_earned")
-  scanLocation Json?   @map("scan_location")
-
-  // Relations
-  nfcTag NfcTag @relation(fields: [nfcTagId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  nfcTagId     String   @map("nfc_tag_id")
+  userId       String   @map("user_id")
+  scanTime     DateTime @default(now()) @map("scan_time")
+  pointsEarned Int      @map("points_earned")
+  scanLocation Json?    @map("scan_location")
+  nfcTag       NfcTag   @relation(fields: [nfcTagId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("nfc_scans")
 }
 
-// Challenges table
 model Challenge {
-  id                String   @id @default(uuid())
-  tenantOwnerId     String   @map("tenant_owner_id")
-  title             String   @db.VarChar(200)
-  description       String   @db.Text
-  challengeType     String   @map("challenge_type") @db.VarChar(50)
-  challengeCategory String   @map("challenge_category") @db.VarChar(50)
-  localization      String?  @db.VarChar(200)
-  startDate         DateTime @map("start_date")
-  endDate           DateTime @map("end_date")
-  maxParticipants   Int?     @map("max_participants")
-  entryFeePoints    Int      @default(0) @map("entry_fee_points")
-  geofenceRadius    Int?     @map("geofence_radius")
-  rules             Json?
-  status            String   @default("draft") @db.VarChar(20)
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tenantOwner           Tenant                 @relation(fields: [tenantOwnerId], references: [id], onDelete: Cascade)
+  id                    String                 @id @default(uuid())
+  tenantOwnerId         String                 @map("tenant_owner_id")
+  title                 String                 @db.VarChar(200)
+  description           String
+  challengeType         String                 @map("challenge_type") @db.VarChar(50)
+  challengeCategory     String                 @map("challenge_category") @db.VarChar(50)
+  localization          String?                @db.VarChar(200)
+  startDate             DateTime               @map("start_date")
+  endDate               DateTime               @map("end_date")
+  maxParticipants       Int?                   @map("max_participants")
+  entryFeePoints        Int                    @default(0) @map("entry_fee_points")
+  geofenceRadius        Int?                   @map("geofence_radius")
+  rules                 Json?
+  status                String                 @default("draft") @db.VarChar(20)
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
   challengeParticipants ChallengeParticipant[]
+  tenantOwner           Tenant                 @relation(fields: [tenantOwnerId], references: [id], onDelete: Cascade)
 
   @@map("challenges")
 }
 
-// Challenge participants table
 model ChallengeParticipant {
-  id               String   @id @default(uuid())
-  challengeId      String   @map("challenge_id")
-  userId           String   @map("user_id")
-  joinedAt         DateTime @default(now()) @map("joined_at")
-  currentScore     Int      @default(0) @map("current_score")
-  completionStatus String   @default("active") @map("completion_status") @db.VarChar(20)
-  finalRanking     Int?     @map("final_ranking")
+  id               String    @id @default(uuid())
+  challengeId      String    @map("challenge_id")
+  userId           String    @map("user_id")
+  joinedAt         DateTime  @default(now()) @map("joined_at")
+  currentScore     Int       @default(0) @map("current_score")
+  completionStatus String    @default("active") @map("completion_status") @db.VarChar(20)
+  finalRanking     Int?      @map("final_ranking")
   completedAt      DateTime? @map("completed_at")
-  currentProgress  Json?    @map("current_progress")
-  finalScore       Int?     @map("final_score")
+  currentProgress  Json?     @map("current_progress")
+  finalScore       Int?      @map("final_score")
   ranking          Int?
-
-  // Relations
-  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge        Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([challengeId, userId])
   @@map("challenge_participants")
 }
 
-// Shares table
 model Share {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  shareType   String   @map("share_type") @db.VarChar(50)
-  platform    String   @db.VarChar(50)
-  contentData Json?    @map("content_data")
-  pointsEarned Int     @map("points_earned")
-  sharedAt    DateTime @default(now()) @map("shared_at")
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  shareType    String   @map("share_type") @db.VarChar(50)
+  platform     String   @db.VarChar(50)
+  contentData  Json?    @map("content_data")
+  pointsEarned Int      @map("points_earned")
+  sharedAt     DateTime @default(now()) @map("shared_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("shares")
 }

@@ -3,7 +3,7 @@ import { TenantsService } from './tenants.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 
-@Controller('tenants')
+@Controller('api/v1/tenants')
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 

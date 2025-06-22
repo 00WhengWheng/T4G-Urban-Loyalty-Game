@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe, VersioningType, RequestMethod } from '@nestjs/common';
 import { ConfigService, ConfigModule } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -34,13 +34,7 @@ async function bootstrap() {
     load: [appConfig],
   });
 
-  // Prometheus metrics
-  const collectDefaultMetrics = promClient.collectDefaultMetrics;
-  collectDefaultMetrics();
-  app.use('/metrics', async (req, res) => {
-    res.set('Content-Type', promClient.register.contentType);
-    res.end(await promClient.register.metrics());
-  });
+  // Prometheus metrics - handled by controller now
 
   // Get configuration service
   const configService = app.get(ConfigService);
@@ -79,10 +73,7 @@ async function bootstrap() {
     defaultVersion: '1',
   });
 
-  // Global prefix
-  app.setGlobalPrefix('api/v1', {
-    exclude: ['/health', '/'],
-  });
+  // No global prefix - use explicit prefixes in controllers
 
   // CORS Configuration
   app.enableCors({
@@ -91,7 +82,9 @@ async function bootstrap() {
       : [
           'http://localhost:3000',
           'http://localhost:3001', 
+          'http://localhost:4000',  // Added for your frontend
           'http://127.0.0.1:3000',
+          'http://127.0.0.1:4000',  // Added for your frontend
           /\.ngrok\.io$/,
           /\.ngrok-free\.app$/,
         ],
@@ -150,29 +143,9 @@ async function bootstrap() {
     });
   }
 
-  // Health check endpoint
-  app.use('/health', (req, res) => {
-    res.status(200).json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: nodeEnv,
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-    });
-  });
+  // Health check endpoint - handled by controller now
 
-  // Root endpoint
-  app.use('/', (req, res) => {
-    if (req.url === '/') {
-      res.status(200).json({
-        message: 'T4G Social Game API',
-        version: '1.0.0',
-        documentation: nodeEnv === 'development' ? '/api/docs' : null,
-        health: '/health',
-      });
-    }
-  });
+  // Root endpoint - handled by controller now
 
   // Start server
   await app.listen(port, '0.0.0.0');
@@ -202,7 +175,8 @@ async function bootstrap() {
   try {
     const { PrismaService } = await import('./prisma/prisma.service');
     const prismaService = app.get(PrismaService);
-    await prismaService.$connect();
+    // Test the connection with a simple query
+    await (prismaService as any).$queryRaw`SELECT 1`;
     console.log('📊 Prisma database connection established successfully');
   } catch (error) {
     console.error('❌ Prisma database connection failed:', error.message);

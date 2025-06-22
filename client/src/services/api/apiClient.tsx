@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { useAuthStore } from '../../stores/authStore';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/v1';
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
@@ -108,7 +108,7 @@ apiClient.interceptors.response.use(
 // API Health check
 export const checkApiHealth = async (): Promise<boolean> => {
   try {
-    const response = await axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`, {
+    const response = await axios.get(`${API_BASE_URL}/health`, {
       timeout: 5000,
     });
     return response.status === 200;

@@ -5,7 +5,7 @@ import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { PlayGameDto } from './dto/play-game.dto';
 
-@Controller('games')
+@Controller('api/v1/games')
 export class GamesController {
   constructor(private gamesService: GamesService) {}
 

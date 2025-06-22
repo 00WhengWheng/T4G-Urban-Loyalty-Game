@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { TenantsModule } from '../tenants/tenants.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { RedisModule } from '../common/redis.module';
+import { GeolocationService } from '../common/services/geolocation.service';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { RedisModule } from '../common/redis.module';
     RedisModule,
   ],
   controllers: [NfcController],
-  providers: [NfcService],
+  providers: [NfcService, GeolocationService],
   exports: [NfcService],
 })
 export class NfcsModule {}

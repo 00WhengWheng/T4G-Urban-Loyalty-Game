@@ -4,7 +4,7 @@ import { SharesService } from './shares.service';
 import { CreateShareDto } from './dto/create-share.dto';
 import { UpdateShareVerificationDto } from './dto/update-share-verification.dto';
 
-@Controller('shares')
+@Controller('api/v1/shares')
 export class SharesController {
   constructor(private sharesService: SharesService) {}
 

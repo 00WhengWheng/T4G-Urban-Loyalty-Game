@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Injectable } from '@nestjs/common';
 
 export interface Coordinates {
     latitude: number;
@@ -13,6 +14,7 @@ export interface Address {
     postalCode?: string;
 }
 
+@Injectable()
 export class GeolocationService {
     // Example: Reverse geocoding using OpenStreetMap Nominatim API
     async reverseGeocode(coords: Coordinates): Promise<Address | null> {

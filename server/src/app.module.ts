@@ -9,6 +9,7 @@ import * as redisStore from 'cache-manager-redis-store';
 
 // Controllers
 import { AppController } from './app.controller';
+import { HealthController } from './health.controller';
 import { AppService } from './app.service';
 
 // Core Modules
@@ -121,7 +122,7 @@ const configValidationSchema = Joi.object({
     SharesModule,
     ScoringModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {

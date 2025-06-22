@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ChallengesService } from './challenges.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 
-@Controller('challenges')
+@Controller('api/v1/challenges')
 export class ChallengesController {
   constructor(private challengesService: ChallengesService) {}
 

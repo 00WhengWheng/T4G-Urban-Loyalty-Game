@@ -395,6 +395,11 @@ export class NfcService extends BaseService<NfcTag, CreateNfcTagDto, UpdateNfcTa
     await this.redis.setJson(cacheKey, dashboardStats, 300); // 5 minutes
     return dashboardStats;
   }
+
+  async getTenantNfcStats(tenantId: string): Promise<any> {
+    // Alias for getTenantDashboardStats for controller compatibility
+    return this.getTenantDashboardStats(tenantId);
+  }
 }
 
 // Interfaces for type safety

@@ -3,7 +3,7 @@ import { TokensService } from './tokens.service';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
 
-@Controller('tokens')
+@Controller('api/v1/tokens')
 export class TokensController {
   constructor(private readonly tokensService: TokensService) {}
 
