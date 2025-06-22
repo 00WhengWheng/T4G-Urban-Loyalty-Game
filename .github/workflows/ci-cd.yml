@@ -63,7 +63,7 @@ jobs:
 
       - name: 📊 Upload coverage reports
         if: matrix.workspace == 'server'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           file: ./server/coverage/lcov.info
           flags: backend
@@ -71,7 +71,7 @@ jobs:
 
       - name: 📊 Upload coverage reports
         if: matrix.workspace == 'client'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           file: ./client/coverage/lcov.info
           flags: frontend
