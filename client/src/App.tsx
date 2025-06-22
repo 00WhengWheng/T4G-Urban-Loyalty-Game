@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'sonner';
-import { useAuthStore } from './store/authStore';
+import { useAuthStore } from './stores/authStore';
 
 // Layout Components
 import { Navbar } from './components/layout/Navbar';

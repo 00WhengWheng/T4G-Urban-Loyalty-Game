@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
 import { toast } from 'sonner';
+import { useAuthStore } from '../../stores/authStore';
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
@@ -16,17 +17,32 @@ export const apiClient: AxiosInstance = axios.create({
 });
 
 // Request interceptor
-apiClient.interceptors.request.use(
-  (config) => {
-    // Add auth token from localStorage if available
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Try to refresh token
+        const refreshResponse = await apiClient.post('/auth/refresh');
+        const newToken = refreshResponse.data.access_token;
+        
+        localStorage.setItem('auth_token', newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        // Only redirect if refresh fails
+        useAuthStore.getState().logout();
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
     }
     
-    return config;
-  },
-  (error) => {
     return Promise.reject(error);
   }
 );

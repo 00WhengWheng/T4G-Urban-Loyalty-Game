@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { initializeAuth } from './store/authStore';
+import { initializeAuth } from './stores/authStore';
 
 // Initialize auth state
 initializeAuth();

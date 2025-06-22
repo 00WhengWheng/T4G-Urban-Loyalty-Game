@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
+
 import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
@@ -20,33 +21,17 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
-    const isDevelopment = this.configService.get('NODE_ENV') === 'development';
-    
-    // Check if auth bypass is enabled via metadata
-    const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (isPublic) {
-      return true;
-    }
-
-    // Development bypass
-    if (isDevelopment) {
-      const developmentBypass = this.configService.get<boolean>('AUTH_BYPASS_DEV', true);
-      
-      const allowMockAuth = this.configService.get<boolean>('ALLOW_MOCK_AUTH', false);
-      if (developmentBypass && allowMockAuth) {
-        this.logger.warn('🚧 [DEV] Authentication bypassed');
-        return this.bypassAuthInDevelopment(context);
-      }
-    }
-
+canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
+  if (process.env.NODE_ENV === 'production') {
+    // Force strict authentication in production
     return super.canActivate(context);
+  }
+
+  // Safe development mode
+  const isPublic = this.reflector.get('isPublic', context.getHandler());
+  if (isPublic) return true;
+
+  return super.canActivate(context);
   }
 
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {

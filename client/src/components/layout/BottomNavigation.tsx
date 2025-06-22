@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, MapPin, QrCode, Gamepad2, User } from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore } from '../../stores/authStore';
 
 // Bottom Navigation Component (Mobile-first)
 export const BottomNavigation: React.FC = () => {
