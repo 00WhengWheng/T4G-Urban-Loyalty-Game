@@ -21,6 +21,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import { TokensPage } from './pages/TokensPage';
 import { ChallengesPage } from './pages/ChallengesPage';
 import { ScanPage } from './pages/ScanPage';
+import { NFCTester } from './components/NFCTester';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -187,6 +188,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <ProfilePage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/nfc-tester" 
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <NFCTester />
                   </AppLayout>
                 </ProtectedRoute>
               } 

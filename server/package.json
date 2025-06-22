@@ -139,6 +139,6 @@
     "npm": ">=9.0.0"
   },
   "prisma": {
-    "schema": "prisma/schema.prisma"
+    "schema": "src/prisma/schema.prisma"
   }
 }

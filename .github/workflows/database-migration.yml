@@ -1,0 +1,100 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      migration_action:
+        description: 'Migration action'
+        required: true
+        default: 'run'
+        type: choice
+        options:
+          - run
+          - generate
+          - revert
+          - show
+      dry_run:
+        description: 'Dry run (staging only)'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  migrate:
+    name: 🗄️ Database Migration
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📥 Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: 📥 Install dependencies
+        run: |
+          cd server
+          pnpm install --frozen-lockfile
+
+      - name: 🔧 Setup environment variables
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
+          echo "POSTGRES_HOST=${{ secrets.POSTGRES_HOST }}" >> $GITHUB_ENV
+          echo "POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}" >> $GITHUB_ENV
+          echo "POSTGRES_USERNAME=${{ secrets.POSTGRES_USERNAME }}" >> $GITHUB_ENV
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> $GITHUB_ENV
+          echo "POSTGRES_DATABASE=${{ secrets.POSTGRES_DATABASE }}" >> $GITHUB_ENV
+
+      - name: 🗄️ Run migration (dry run)
+        if: github.event.inputs.dry_run == 'true' && github.event.inputs.environment == 'staging'
+        run: |
+          cd server
+          echo "🔍 This would run: pnpm run migration:${{ github.event.inputs.migration_action }}"
+          pnpm run migration:show
+
+      - name: 🗄️ Run migration
+        if: github.event.inputs.dry_run == 'false' || github.event.inputs.environment == 'production'
+        run: |
+          cd server
+          pnpm run migration:${{ github.event.inputs.migration_action }}
+
+      - name: ✅ Verify migration
+        if: github.event.inputs.migration_action == 'run'
+        run: |
+          cd server
+          pnpm run migration:show
+
+      - name: 📢 Notify team
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#t4g-deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: |
+            🗄️ Database Migration ${{ github.event.inputs.migration_action }} completed on ${{ github.event.inputs.environment }}
+            Status: ${{ job.status }}
+            Triggered by: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        if: always()

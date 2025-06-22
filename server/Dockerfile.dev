@@ -4,25 +4,34 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies and pnpm
 RUN apk add --no-cache \
     postgresql-client \
     curl \
-    && rm -rf /var/cache/apk/*
+    openssl \
+    && rm -rf /var/cache/apk/* \
+    && npm install -g pnpm
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nestjs -u 1001
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
+COPY pnpm-lock.yaml ./
 COPY tsconfig*.json ./
 COPY nest-cli.json ./
 
 # Install dependencies
-RUN npm ci --only=development
+RUN pnpm install --frozen-lockfile
 
-# Copy source code
+# Copy Prisma schema first
+COPY src/prisma ./src/prisma
+
+# Generate Prisma client with binary targets for Alpine
+RUN pnpm exec prisma generate --schema=./src/prisma/schema.prisma
+
+# Copy rest of source code
 COPY . .
 
 # Change ownership to app user
@@ -34,7 +43,7 @@ EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:3001/health || exit 1
+  CMD curl -f http://localhost:3001/v1/health || exit 1
 
 # Development command
-CMD ["npm", "run", "start:dev"]
+CMD ["pnpm", "run", "start:dev"]

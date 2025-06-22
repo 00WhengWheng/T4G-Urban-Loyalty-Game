@@ -16,8 +16,9 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { CreateTenantDto } from '../tenants/dto/create-tenant.dto';
 import { LoginDto } from './dto/login.dto';
+import { LoginResponseDto, ErrorResponseDto } from './dto/response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -29,10 +30,26 @@ export class AuthController {
   // ============================================================================
 
   @Post('user/register')
-  @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User successfully registered' })
-  @ApiResponse({ status: 409, description: 'User already exists' })
-  @ApiResponse({ status: 400, description: 'Invalid registration data' })
+  @ApiOperation({ 
+    summary: 'Register a new user',
+    description: 'Creates a new user account with email and password. The user will need to verify their email before logging in.'
+  })
+  @ApiBody({ type: CreateUserDto, description: 'User registration data' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'User successfully registered',
+    type: LoginResponseDto
+  })
+  @ApiResponse({ 
+    status: 409, 
+    description: 'User already exists',
+    type: ErrorResponseDto
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Invalid registration data',
+    type: ErrorResponseDto
+  })
   async registerUser(
     @Body() createUserDto: CreateUserDto,
     @Req() req: Request,
@@ -337,11 +354,27 @@ export class AuthController {
    */
   private setAuthCookie(res: Response, token: string): void {
     const isProduction = process.env.NODE_ENV === 'production';
-    
+    // Detect if request is from ngrok or external (not localhost)
+    // In production, always use secure/none; in dev, check referer/origin
+    let sameSite: 'lax' | 'strict' | 'none' = 'lax';
+    let secure = isProduction;
+    const allowedNone = [
+      '.ngrok.io',
+      '.ngrok-free.app',
+    ];
+    // Check referer or origin header for ngrok
+    const reqOrigin = res.req?.headers['origin'] || res.req?.headers['referer'] || '';
+    if (
+      isProduction ||
+      allowedNone.some((d) => reqOrigin && reqOrigin.includes(d))
+    ) {
+      sameSite = 'none';
+      secure = true;
+    }
     res.cookie('auth_token', token, {
       httpOnly: true,
-      secure: isProduction, // HTTPS in production
-      sameSite: isProduction ? 'strict' : 'lax',
+      secure,
+      sameSite,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
       domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
@@ -353,11 +386,24 @@ export class AuthController {
    */
   private clearAuthCookie(res: Response): void {
     const isProduction = process.env.NODE_ENV === 'production';
-    
+    let sameSite: 'lax' | 'strict' | 'none' = 'lax';
+    let secure = isProduction;
+    const allowedNone = [
+      '.ngrok.io',
+      '.ngrok-free.app',
+    ];
+    const reqOrigin = res.req?.headers['origin'] || res.req?.headers['referer'] || '';
+    if (
+      isProduction ||
+      allowedNone.some((d) => reqOrigin && reqOrigin.includes(d))
+    ) {
+      sameSite = 'none';
+      secure = true;
+    }
     res.clearCookie('auth_token', {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      secure,
+      sameSite,
       path: '/',
       domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
     });

@@ -123,23 +123,113 @@ export const ScanPage: React.FC = () => {
     setScanState('scanning');
 
     try {
-      // Simulate NFC scan with random result
-      setTimeout(() => {
-        setScanState('processing');
+      // Real NFC implementation
+      if ('NDEFReader' in window) {
+        const reader = new (window as any).NDEFReader();
         
-        setTimeout(() => {
-          const outcomes = ['success', 'error', 'rate_limit', 'distance_error'];
-          const randomOutcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+        await reader.scan();
+        
+        reader.addEventListener('reading', ({ message, serialNumber }: any) => {
+          console.log('NFC Reading event:', { message, serialNumber });
+          setScanState('processing');
           
-          handleScanResult(randomOutcome);
-        }, 1500);
-      }, 2000);
+          // Extract tag identifier from NFC message
+          let tagIdentifier = '';
+          for (const record of message.records) {
+            if (record.recordType === 'text') {
+              tagIdentifier = new TextDecoder().decode(record.data);
+              break;
+            } else if (record.recordType === 'url') {
+              const url = new TextDecoder().decode(record.data);
+              // Extract tag ID from URL parameters
+              const urlParams = new URLSearchParams(url.split('?')[1]);
+              tagIdentifier = urlParams.get('tag') || '';
+              break;
+            }
+          }
+          
+          if (tagIdentifier) {
+            // Call your backend API
+            handleRealNFCScan(tagIdentifier, serialNumber);
+          } else {
+            setScanState('error');
+            setScanResult({ message: 'Tag NFC non valido - formato non riconosciuto' });
+          }
+        });
+        
+        reader.addEventListener('readingerror', (error: any) => {
+          console.error('NFC Reading error:', error);
+          setScanState('error');
+          setScanResult({ message: `Errore lettura NFC: ${error}` });
+        });
+        
+      } else {
+        // Fallback to simulation for development/testing
+        simulateNFCScan();
+      }
 
     } catch (error) {
       console.error('NFC scan error:', error);
       setScanState('error');
       setScanResult({ message: 'Errore durante la scansione NFC' });
     }
+  };
+
+  const handleRealNFCScan = async (tagIdentifier: string, serialNumber: string) => {
+    try {
+      // Prepare scan data
+      const scanData = {
+        tag_identifier: tagIdentifier,
+        user_latitude: userLocation?.lat,
+        user_longitude: userLocation?.lng,
+        scan_location: userLocation ? {
+          latitude: userLocation.lat,
+          longitude: userLocation.lng,
+          accuracy: 10, // meters
+          timestamp: new Date().toISOString()
+        } : undefined,
+        device_info: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          appVersion: '1.0.0',
+          nfcSerial: serialNumber
+        }
+      };
+
+      // TODO: Replace with actual API call
+      // const response = await fetch('/api/v1/nfc/scan', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${authToken}`
+      //   },
+      //   body: JSON.stringify(scanData)
+      // });
+      
+      // For now, simulate response
+      setTimeout(() => {
+        handleScanResult('success');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('API call failed:', error);
+      setScanState('error');
+      setScanResult({ message: 'Errore comunicazione server' });
+    }
+  };
+
+  const simulateNFCScan = () => {
+    // Simulate NFC scan with random result for testing
+    setTimeout(() => {
+      setScanState('processing');
+      
+      setTimeout(() => {
+        const outcomes = ['success', 'error', 'rate_limit', 'distance_error'];
+        const randomOutcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+        
+        handleScanResult(randomOutcome);
+      }, 1500);
+    }, 2000);
   };
 
   const startQRScan = async () => {

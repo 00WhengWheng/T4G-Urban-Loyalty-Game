@@ -5,48 +5,52 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Install system dependencies for building
+# Install system dependencies for building and pnpm
 RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    postgresql-client
+    postgresql-client \
+    && npm install -g pnpm
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
+COPY pnpm-lock.yaml ./
 COPY tsconfig*.json ./
 COPY nest-cli.json ./
 
 # Install all dependencies (including dev)
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN pnpm run build
 
 # Stage 2: Production
 FROM node:18-alpine AS production
 
 WORKDIR /app
 
-# Install only production system dependencies
+# Install only production system dependencies and pnpm
 RUN apk add --no-cache \
     postgresql-client \
     curl \
     dumb-init \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/cache/apk/* \
+    && npm install -g pnpm
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nestjs -u 1001
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
+COPY pnpm-lock.yaml ./
 
 # Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN pnpm install --frozen-lockfile --prod && pnpm store prune
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
@@ -65,7 +69,7 @@ EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:3001/health || exit 1
+  CMD curl -f http://localhost:3001/v1/health || exit 1
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]

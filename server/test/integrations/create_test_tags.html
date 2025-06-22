@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T4G NFC Tag Writer</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .container { background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 10px 0; }
+        button { background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🏷️ T4G NFC Tag Writer</h1>
+    <p>Use this tool to write test NFC tags for your Urban Loyalty Game.</p>
+    
+    <div class="container">
+        <h3>📝 Write Custom Tag</h3>
+        <input type="text" id="customTag" placeholder="Enter tag identifier (e.g., T4G_RESTAURANT_001)" value="T4G_TEST_001">
+        <button onclick="writeCustomTag()">Write Custom Tag</button>
+    </div>
+    
+    <div class="container">
+        <h3>🎯 Quick Test Tags</h3>
+        <button onclick="writeTestTag('T4G_BAR_CENTRAL_001')">Bar Central</button>
+        <button onclick="writeTestTag('T4G_RESTAURANT_002')">Restaurant Roma</button>
+        <button onclick="writeTestTag('T4G_COFFEE_003')">Coffee Shop</button>
+        <button onclick="writeTestTag('T4G_GELATERIA_004')">Gelateria Luna</button>
+    </div>
+    
+    <div class="container">
+        <h3>🔍 Read NFC Tag</h3>
+        <button onclick="readTag()">Read Tag</button>
+        <div id="readResult"></div>
+    </div>
+    
+    <div id="status"></div>
+    
+    <div class="container">
+        <h3>ℹ️ Instructions</h3>
+        <ol>
+            <li>Open this page on an Android device with Chrome</li>
+            <li>Enable NFC in device settings</li>
+            <li>Choose a tag identifier and click "Write"</li>
+            <li>Hold an NFC tag near your device when prompted</li>
+            <li>Test scanning with your T4G app</li>
+        </ol>
+    </div>
+
+    <script>
+        let ndefReader;
+        
+        async function initNFC() {
+            if ('NDEFReader' in window) {
+                ndefReader = new NDEFReader();
+                return true;
+            } else {
+                showStatus('❌ NFC not supported on this device/browser', 'error');
+                return false;
+            }
+        }
+        
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="container ${type}">${message}</div>`;
+        }
+        
+        async function writeCustomTag() {
+            const tagValue = document.getElementById('customTag').value;
+            if (!tagValue) {
+                showStatus('❌ Please enter a tag identifier', 'error');
+                return;
+            }
+            await writeTag(tagValue);
+        }
+        
+        async function writeTestTag(identifier) {
+            await writeTag(identifier);
+        }
+        
+        async function writeTag(identifier) {
+            if (!(await initNFC())) return;
+            
+            try {
+                showStatus('📱 Hold an NFC tag near your device...');
+                
+                const message = {
+                    records: [{
+                        recordType: "text",
+                        data: identifier
+                    }]
+                };
+                
+                await ndefReader.write(message);
+                showStatus(`✅ Successfully wrote tag: ${identifier}`, 'success');
+                
+            } catch (error) {
+                showStatus(`❌ Write error: ${error.message}`, 'error');
+                console.error('NFC write error:', error);
+            }
+        }
+        
+        async function readTag() {
+            if (!(await initNFC())) return;
+            
+            try {
+                showStatus('📱 Hold an NFC tag near your device to read...');
+                
+                ndefReader.addEventListener('reading', ({ message, serialNumber }) => {
+                    let content = 'Unknown format';
+                    
+                    for (const record of message.records) {
+                        if (record.recordType === 'text') {
+                            content = new TextDecoder().decode(record.data);
+                            break;
+                        } else if (record.recordType === 'url') {
+                            content = new TextDecoder().decode(record.data);
+                            break;
+                        }
+                    }
+                    
+                    const result = `
+                        <h4>📖 Tag Read Successfully</h4>
+                        <p><strong>Serial:</strong> ${serialNumber}</p>
+                        <p><strong>Content:</strong> ${content}</p>
+                        <p><strong>Records:</strong> ${message.records.length}</p>
+                    `;
+                    
+                    document.getElementById('readResult').innerHTML = result;
+                    showStatus('✅ Tag read successfully', 'success');
+                });
+                
+                await ndefReader.scan();
+                
+            } catch (error) {
+                showStatus(`❌ Read error: ${error.message}`, 'error');
+                console.error('NFC read error:', error);
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initNFC);
+    </script>
+</body>
+</html>

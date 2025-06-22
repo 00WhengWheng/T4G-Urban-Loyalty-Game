@@ -1,0 +1,96 @@
+{
+  "name": "NFC Testing Configuration",
+  "description": "Development environment setup for NFC testing on mobile devices",
+  "version": "1.0.0",
+  "scripts": {
+    "nfc:setup": "./setup_nfc_testing.sh",
+    "nfc:dev-https": "HTTPS=true SSL_CRT_FILE=./certs/cert.pem SSL_KEY_FILE=./certs/key.pem npm start",
+    "nfc:build-serve": "npm run build && npx serve -s build --ssl-cert ./certs/cert.pem --ssl-key ./certs/key.pem -p 3000",
+    "nfc:ngrok": "ngrok http 5173",
+    "nfc:test": "npm test -- --testPathPattern=nfc"
+  },
+  "nfc_testing": {
+    "supported_browsers": [
+      "Chrome 89+ (Android)",
+      "Edge 89+ (Android)"
+    ],
+    "supported_devices": [
+      "Android phones with NFC",
+      "Android tablets with NFC"
+    ],
+    "requirements": [
+      "HTTPS connection required",
+      "NFC enabled in device settings",
+      "Web NFC API support",
+      "Valid NDEF-formatted NFC tags"
+    ],
+    "test_scenarios": [
+      "First-time scan success",
+      "Rate limiting (rapid scans)",
+      "Location validation",
+      "Daily scan limits",
+      "Invalid/corrupted tags",
+      "Network connectivity issues",
+      "Permission handling"
+    ]
+  },
+  "recommended_nfc_tags": [
+    {
+      "type": "NTAG213",
+      "capacity": "180 bytes",
+      "price_range": "$0.50-$1.00",
+      "use_case": "Basic testing"
+    },
+    {
+      "type": "NTAG215",
+      "capacity": "540 bytes", 
+      "price_range": "$1.00-$2.00",
+      "use_case": "Extended data testing"
+    },
+    {
+      "type": "NTAG216",
+      "capacity": "924 bytes",
+      "price_range": "$2.00-$3.00", 
+      "use_case": "Complex data scenarios"
+    }
+  ],
+  "testing_tools": {
+    "nfc_apps": [
+      "NFC Tools (Android)",
+      "TagWriter (Android)", 
+      "NFC TagStand (Android)"
+    ],
+    "debugging": [
+      "Chrome DevTools",
+      "Android Debug Bridge (ADB)",
+      "Wireshark (network analysis)"
+    ],
+    "simulation": [
+      "Mock NDEFReader (development)",
+      "QR Code fallback",
+      "Manual API testing"
+    ]
+  },
+  "common_issues": {
+    "nfc_not_supported": {
+      "error": "NDEFReader is not defined",
+      "solution": "Test on Android Chrome 89+",
+      "fallback": "Use QR code scanning"
+    },
+    "https_required": {
+      "error": "SecurityError: HTTPS required",
+      "solution": "Serve over HTTPS or use localhost",
+      "tools": ["ngrok", "SSL certificates"]
+    },
+    "permission_denied": {
+      "error": "NotAllowedError: NFC permission denied", 
+      "solution": "Clear site data and retry permissions",
+      "note": "User must grant NFC access"
+    },
+    "nfc_disabled": {
+      "error": "NotSupportedError: NFC is not enabled",
+      "solution": "Enable NFC in device settings",
+      "path": "Settings → Connected devices → NFC"
+    }
+  }
+}

@@ -62,15 +62,42 @@ export default defineConfig({
     },
   },
   server: {
-    port: 4000,
-    host: '0.0.0.0',
-    open: true,
+    port: 3000,
+    host: '0.0.0.0', // Bind to all interfaces
+    open: false,
+    cors: true, // Enable CORS
+    // Disable host checking for mobile access
+    allowedHosts: ['localhost', '172.23.46.109', '0.0.0.0', '2b96-151-43-38-227.ngrok-free.app'],
+    strictPort: false,
+    hmr: {
+      host: '0.0.0.0',
+      port: 24678,
+      clientPort: 24678
+    },
     proxy: {
       '/api': {
-        target: 'http://172.30.37.133:3001',
+        target: 'http://server:3001',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api/, '/v1'),
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Ensure mobile requests are properly forwarded
+            proxyReq.setHeader('Host', 'server:3001');
+          });
+        },
+      },
+      '/auth': {
+        target: 'http://server:3001',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/auth/, '/v1/auth'),
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Ensure mobile requests are properly forwarded
+            proxyReq.setHeader('Host', 'server:3001');
+          });
+        },
       },
     },
   },

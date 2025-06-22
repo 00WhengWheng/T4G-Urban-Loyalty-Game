@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "swagger:generate": "ts-node scripts/generate-openapi.ts",
+    "swagger:validate": "swagger-codegen validate -i ./docs/openapi.json",
+    "swagger:client": "openapi-generator-cli generate -i ./docs/openapi.json -g typescript-axios -o ./generated/client"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.7.0",
+    "swagger-codegen-cli": "^3.0.0"
+  }
+}
