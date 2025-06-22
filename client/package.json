@@ -67,7 +67,7 @@
     "msw": "^2.0.11",
     "postcss": "^8.4.33",
     "prettier": "^3.1.1",
-    "prettier-plugin-tailwindcss": "^0.5.10",
+    "prettier-plugin-tailwindcss": "^0.6.13",
     "react-leaflet": "^5.0.0",
     "serve": "^14.2.1",
     "tailwindcss": "^3.4.1",
