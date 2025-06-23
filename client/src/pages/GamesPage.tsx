@@ -125,6 +125,7 @@ const mockGames = [
 export const GamesPage: React.FC = () => {
   const { user, updateUserPoints } = useAuthStore();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const gameType = searchParams.get('type');
   const [games, setGames] = useState(mockGames);
   const [searchTerm, setSearchTerm] = useState('');
@@ -202,6 +203,18 @@ export const GamesPage: React.FC = () => {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Quick Games</h1>
         <p className="text-gray-600">Gioca, divertiti e guadagna punti</p>
+        
+        {/* New Phaser Games Link */}
+        <div className="mt-4">
+          <Button
+            onClick={() => navigate('/mini-games')}
+            className="flex items-center gap-2 mx-auto"
+            variant="primary"
+          >
+            <Gamepad2 className="w-4 h-4" />
+            Try Our New Urban Mini-Games!
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filter */}

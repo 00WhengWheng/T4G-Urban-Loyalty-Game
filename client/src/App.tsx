@@ -16,6 +16,7 @@ import { HomeUser } from './pages/HomeUser';
 import DashboardPage from './pages/DashboardPage';
 import { MapPage } from './pages/MapPage';
 import { GamesPage } from './pages/GamesPage';
+import PhaserGamesPage from './pages/PhaserGamesPage';
 import ProfilePage from './pages/ProfilePage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import { TokensPage } from './pages/TokensPage';
@@ -138,6 +139,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <GamesPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/mini-games" 
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <PhaserGamesPage />
                   </AppLayout>
                 </ProtectedRoute>
               } 
