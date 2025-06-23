@@ -5,7 +5,41 @@
 # Project-specific files
 .claude/
 CLAUDE.md
+
+# =============================================================================
+# SECURITY & CERTIFICATES - CRITICAL!
+# =============================================================================
+
+# SSL/TLS Certificates and Keys
 certs/
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+
+# SSH Keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
+
+# AWS Credentials
+.aws/
+aws-credentials*
+**/aws-credentials*
+
+# Secrets and API Keys
+secrets/
+**/secrets/
+*.secret
+api-keys*
+**/api-keys*
 
 # =============================================================================
 # ENVIRONMENT VARIABLES & SECRETS
