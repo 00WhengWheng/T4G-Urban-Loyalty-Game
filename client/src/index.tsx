@@ -1,15 +1,19 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import MinimalApp from './MinimalApp';
 import './index.css';
-import { initializeAuth } from './stores/authStore';
 
-// Initialize auth state
-initializeAuth();
+console.log('🚀 Starting MINIMAL React app...');
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  console.error('❌ Root element not found!');
+  document.body.innerHTML = '<h1 style="color: red;">ERROR: Root element not found!</h1>';
+} else {
+  console.log('✅ Root element found, mounting React...');
+  
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(<MinimalApp />);
+  
+  console.log('✅ React app mounted successfully!');
+}

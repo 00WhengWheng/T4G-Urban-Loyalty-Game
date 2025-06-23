@@ -160,6 +160,42 @@ export const GAME_CONFIGS: Record<string, GameConfig> = {
       scalingMode: 'fit',
       virtualControls: true
     }
+  },
+  'trash-collector': {
+    id: 'trash-collector',
+    name: 'Eco Warrior',
+    description: 'Clean up the city by collecting and sorting trash into recycling bins!',
+    type: 'trash-collector',
+    difficulty: 'medium',
+    maxDuration: 180, // 3 minutes
+    targetScore: 1000,
+    rewards: {
+      basePoints: 120,
+      bonusMultiplier: 1.7,
+      tokens: 6,
+      achievements: ['eco-warrior', 'recycling-master', 'city-cleaner']
+    },
+    assets: {
+      sprites: ['player', 'trash-items', 'recycling-bins', 'power-ups'],
+      audio: ['collect', 'deposit', 'power-up', 'full-bin'],
+      textures: ['city-streets', 'buildings', 'parks'],
+      backgrounds: ['urban-environment']
+    },
+    controls: {
+      touch: true,
+      keyboard: true,
+      mouse: false,
+      gestures: ['tap', 'swipe']
+    },
+    mobile: {
+      orientation: 'landscape',
+      scalingMode: 'fit',
+      virtualControls: true
+    },
+    backgroundColor: '#4a5d4a',
+    physics: {
+      gravity: { x: 0, y: 0 }
+    }
   }
 };
 
@@ -215,14 +251,14 @@ export const ACHIEVEMENT_DEFINITIONS = {
     condition: { type: 'score', target: 100 },
     reward: { points: 75, tokens: 3 }
   },
-  // 'eco-warrior': {
-  //   id: 'eco-warrior',
-  //   name: 'Eco Warrior',
-  //   description: 'Clean up the entire city',
-  //   icon: '🌱',
-  //   condition: { type: 'completion', target: 1, gameId: 'trash-collector' },
-  //   reward: { points: 60, tokens: 3 }
-  // },
+  'eco-warrior': {
+    id: 'eco-warrior',
+    name: 'Eco Warrior',
+    description: 'Clean up the entire city',
+    icon: '🌱',
+    condition: { type: 'completion', target: 1, gameId: 'trash-collector' },
+    reward: { points: 60, tokens: 3 }
+  },
   'traffic-controller': {
     id: 'traffic-controller',
     name: 'Traffic Controller',
@@ -230,6 +266,22 @@ export const ACHIEVEMENT_DEFINITIONS = {
     icon: '🚦',
     condition: { type: 'completion', target: 1, gameId: 'traffic-master' },
     reward: { points: 120, tokens: 6 }
+  },
+  'recycling-master': {
+    id: 'recycling-master',
+    name: 'Recycling Master',
+    description: 'Sort 100 items correctly into recycling bins',
+    icon: '♻️',
+    condition: { type: 'score', target: 1000, gameId: 'trash-collector' },
+    reward: { points: 100, tokens: 5 }
+  },
+  'city-cleaner': {
+    id: 'city-cleaner',
+    name: 'City Cleaner',
+    description: 'Achieve 90% recycling efficiency',
+    icon: '🏙️',
+    condition: { type: 'score', target: 1500, gameId: 'trash-collector' },
+    reward: { points: 150, tokens: 7 }
   }
 } as const;
 

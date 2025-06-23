@@ -181,6 +181,11 @@ export const useAuthStore = create<AuthState>()(
 
 // Initialize auth state on app start
 export const initializeAuth = async () => {
-  const { loadUser } = useAuthStore.getState();
-  await loadUser();
+  try {
+    const { loadUser } = useAuthStore.getState();
+    await loadUser();
+  } catch (error) {
+    console.log('Auth initialization skipped:', error);
+    // Don't crash the app if auth initialization fails
+  }
 };

@@ -22,11 +22,19 @@ export interface GameConfig {
   assets: GameAssets;
   controls: GameControls;
   mobile: MobileConfig;
+  backgroundColor?: string;
+  physics?: {
+    gravity?: {
+      x?: number;
+      y?: number;
+    };
+  };
 }
 
 export type GameType = 
   | 'urban-runner' 
   | 'traffic-master' 
+  | 'trash-collector'
   | 'building-climber' 
   | 'bus-driver' 
   | 'pizza-delivery'

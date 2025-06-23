@@ -108,6 +108,14 @@ export const Navbar: React.FC = () => {
                       Il Mio Profilo
                     </Link>
                     <Link
+                      to="/neon-auth"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Settings className="w-4 h-4 mr-3" />
+                      🚀 Neon Auth Demo
+                    </Link>
+                    <Link
                       to="/settings"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setIsMenuOpen(false)}

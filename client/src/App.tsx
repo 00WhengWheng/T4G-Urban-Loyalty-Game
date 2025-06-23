@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'sonner';
 import { useAuthStore } from './stores/authStore';
 
+// Auth Demo Component (simple, no Stack Auth dependencies)
+import { NeonAuthDemo } from './components/auth/NeonAuthDemo';
+import { LoadingFallback } from './components/ui/LoadingFallback';
+
 // Layout Components
 import { Navbar } from './components/layout/Navbar';
 import { BottomNavigation } from './components/layout/BottomNavigation';
@@ -101,6 +105,16 @@ function App() {
                 <PublicRoute>
                   <RegisterPage />
                 </PublicRoute>
+              } 
+            />
+
+            {/* Neon Auth Demo (no Stack Auth dependencies) */}
+            <Route 
+              path="/neon-auth" 
+              element={
+                <AppLayout>
+                  <NeonAuthDemo />
+                </AppLayout>
               } 
             />
 
