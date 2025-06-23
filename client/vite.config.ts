@@ -67,7 +67,7 @@ export default defineConfig({
     open: false,
     cors: true, // Enable CORS
     // Disable host checking for mobile access
-    allowedHosts: ['localhost', '172.23.46.109', '0.0.0.0', '2b96-151-43-38-227.ngrok-free.app'],
+    allowedHosts: ['localhost', '172.23.46.109', '0.0.0.0', '.ngrok-free.app', '.ngrok.app', '.ngrok.io'],
     strictPort: false,
     hmr: {
       host: '0.0.0.0',

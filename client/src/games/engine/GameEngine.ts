@@ -30,6 +30,11 @@ export class GameEngine {
     this.destroyCurrentGame();
 
     try {
+      // Check if we're in browser environment
+      if (typeof window === 'undefined') {
+        throw new Error('Game engine requires browser environment');
+      }
+
       // Import Phaser dynamically to avoid SSR issues
       const Phaser = await import('phaser');
 
@@ -78,7 +83,7 @@ export class GameEngine {
       
     } catch (error) {
       console.error('Failed to initialize game:', error);
-      throw new Error('Game initialization failed');
+      throw new Error(`Game initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -96,15 +101,15 @@ export class GameEngine {
             SceneClass = DefaultScene;
           }
           break;
-        case 'trash-collector':
-          try {
-            const { TrashCollectorScene } = await import('../mini-games/trash-collector/TrashCollectorScene');
-            SceneClass = TrashCollectorScene;
-          } catch {
-            const { DefaultScene } = await import('../scenes/DefaultScene');
-            SceneClass = DefaultScene;
-          }
-          break;
+        // case 'trash-collector':
+        //   try {
+        //     const { TrashCollectorScene } = await import('../mini-games/trash-collector/TrashCollectorScene');
+        //     SceneClass = TrashCollectorScene;
+        //   } catch {
+        //     const { DefaultScene } = await import('../scenes/DefaultScene');
+        //     SceneClass = DefaultScene;
+        //   }
+        //   break;
         default:
           const { DefaultScene } = await import('../scenes/DefaultScene');
           SceneClass = DefaultScene;
@@ -118,11 +123,16 @@ export class GameEngine {
     } catch (error) {
       console.error('Failed to load game scene:', error);
       // Fallback to default scene
-      const { DefaultScene } = await import('../scenes/DefaultScene');
-      const scene = new DefaultScene(config, this);
-      game.scene.add(config.id, scene);
-      game.scene.start(config.id);
-      this.currentGame!.scene = scene;
+      try {
+        const { DefaultScene } = await import('../scenes/DefaultScene');
+        const scene = new DefaultScene(config, this);
+        game.scene.add(config.id, scene);
+        game.scene.start(config.id);
+        this.currentGame!.scene = scene;
+      } catch (fallbackError) {
+        console.error('Failed to load fallback scene:', fallbackError);
+        throw new Error('Unable to load any game scene');
+      }
     }
   }
 

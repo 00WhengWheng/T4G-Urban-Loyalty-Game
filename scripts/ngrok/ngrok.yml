@@ -1,0 +1,36 @@
+# ngrok configuration for T4G Urban Loyalty Game
+# This exposes your local development environment to mobile devices
+
+version: "2"
+
+tunnels:
+  # Frontend React App (Main app for mobile access)
+  frontend:
+    addr: 4001
+    proto: http
+    inspect: true
+    # You can add a custom subdomain if you have a paid plan
+    # subdomain: t4g-app
+
+  # Backend NestJS API
+  api:
+    addr: 3002
+    proto: http
+    inspect: true
+    # You can add a custom subdomain if you have a paid plan
+    # subdomain: t4g-api
+
+  # Optional: PgAdmin for database management
+  pgadmin:
+    addr: 5051
+    proto: http
+    inspect: true
+
+  # Optional: Redis Commander
+  redis-ui:
+    addr: 8081
+    proto: http
+    inspect: true
+
+# Web interface settings
+web_addr: localhost:4040

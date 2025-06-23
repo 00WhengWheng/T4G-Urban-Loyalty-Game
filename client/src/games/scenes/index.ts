@@ -1,1 +1,1 @@
-export { BaseScene, DefaultScene } from './DefaultScene';
+export { DefaultScene } from './DefaultScene';

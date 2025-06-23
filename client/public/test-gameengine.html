@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameEngine Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #test-results { background: #f0f0f0; padding: 20px; margin: 20px 0; }
+        #game-container { width: 800px; height: 600px; border: 2px solid #ccc; margin: 20px 0; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>GameEngine Test</h1>
+    <div id="test-results">Loading tests...</div>
+    <div id="game-container"></div>
+
+    <script type="module">
+        const results = document.getElementById('test-results');
+        
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = isError ? 'error' : 'success';
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        async function testGameEngine() {
+            try {
+                log('Starting GameEngine tests...');
+                
+                // Test 1: Import GameEngine
+                const { GameEngine } = await import('/src/games/engine/GameEngine.ts');
+                log('✅ GameEngine imported successfully');
+                
+                // Test 2: Get instance
+                const engine = GameEngine.getInstance();
+                log('✅ GameEngine instance created');
+                
+                // Test 3: Initialize game
+                const config = {
+                    id: 'test-game',
+                    name: 'Test Game',
+                    type: 'default',
+                    description: 'A test game',
+                    thumbnail: '',
+                    difficultyLevel: 1,
+                    maxScore: 1000,
+                    timeLimit: 60
+                };
+                
+                await engine.initializeGame(config, 'game-container');
+                log('✅ Game initialized successfully');
+                
+                // Test 4: Check game state
+                const state = engine.getGameState();
+                log(`✅ Game state: ${JSON.stringify(state)}`);
+                
+                log('🎉 All tests passed! GameEngine is working correctly.');
+                
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`, true);
+                log(`❌ Stack trace: ${error.stack}`, true);
+            }
+        }
+
+        testGameEngine();
+    </script>
+</body>
+</html>

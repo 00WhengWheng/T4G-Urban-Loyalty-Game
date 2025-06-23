@@ -33,38 +33,6 @@ export const GAME_CONFIGS: Record<string, GameConfig> = {
       virtualControls: true
     }
   },
-  'trash-collector': {
-    id: 'trash-collector',
-    name: 'Eco Hero',
-    description: 'Clean up the city by collecting trash and recycling!',
-    type: 'trash-collector',
-    difficulty: 'easy',
-    maxDuration: 90,
-    targetScore: 800,
-    rewards: {
-      basePoints: 80,
-      bonusMultiplier: 1.3,
-      tokens: 4,
-      achievements: ['eco-warrior', 'clean-sweep', 'recycling-master']
-    },
-    assets: {
-      sprites: ['character', 'trash', 'bins', 'recyclables'],
-      audio: ['pickup', 'drop', 'victory'],
-      textures: ['park-bg', 'street-bg'],
-      backgrounds: ['city-park']
-    },
-    controls: {
-      touch: true,
-      keyboard: true,
-      mouse: true,
-      gestures: ['tap', 'drag']
-    },
-    mobile: {
-      orientation: 'portrait',
-      scalingMode: 'fit',
-      virtualControls: true
-    }
-  },
   'traffic-master': {
     id: 'traffic-master',
     name: 'Traffic Master',
@@ -247,14 +215,14 @@ export const ACHIEVEMENT_DEFINITIONS = {
     condition: { type: 'score', target: 100 },
     reward: { points: 75, tokens: 3 }
   },
-  'eco-warrior': {
-    id: 'eco-warrior',
-    name: 'Eco Warrior',
-    description: 'Clean up the entire city',
-    icon: '🌱',
-    condition: { type: 'completion', target: 1, gameId: 'trash-collector' },
-    reward: { points: 60, tokens: 3 }
-  },
+  // 'eco-warrior': {
+  //   id: 'eco-warrior',
+  //   name: 'Eco Warrior',
+  //   description: 'Clean up the entire city',
+  //   icon: '🌱',
+  //   condition: { type: 'completion', target: 1, gameId: 'trash-collector' },
+  //   reward: { points: 60, tokens: 3 }
+  // },
   'traffic-controller': {
     id: 'traffic-controller',
     name: 'Traffic Controller',

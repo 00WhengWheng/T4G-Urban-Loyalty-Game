@@ -1,80 +1,81 @@
-/// <reference path="../types/phaser.d.ts" />
+import Phaser from 'phaser';
 import { GameConfig } from '../types';
 
-export abstract class BaseScene {
-  protected config: GameConfig;
-  protected gameEngine: any;
-  
+// Minimal Phaser Scene implementation
+export class DefaultScene extends Phaser.Scene {
+  private config: GameConfig;
+  private gameEngine: any;
+  private score: number = 0;
+
   constructor(config: GameConfig, gameEngine: any) {
+    // Pass scene config to Phaser.Scene
+    super({ key: config.id });
     this.config = config;
     this.gameEngine = gameEngine;
   }
 
-  abstract preload(): void;
-  abstract create(): void;
-  abstract update(): void;
-
-  protected loadAssets(): void {
-    // Basic asset loading implementation
-    if (this.config.assets.sprites.length > 0) {
-      console.log('Loading sprites:', this.config.assets.sprites);
-    }
-  }
-
-  protected setupInput(): void {
-    // Basic input setup for mobile and desktop
-    console.log('Setting up input controls');
-  }
-
-  protected startGameTimer(): void {
-    // Game timer implementation
-    console.log('Starting game timer');
-  }
-}
-
-export class DefaultScene extends BaseScene {
-  private score: number = 0;
-  private gameObjects: any[] = [];
-
   preload(): void {
-    this.loadAssets();
+    console.log('Preloading assets for:', this.config.name);
+    // Add a simple colored rectangle as a placeholder
+    this.load.image('placeholder', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
   }
 
   create(): void {
-    this.setupInput();
-    this.startGameTimer();
+    console.log('Creating scene for:', this.config.name);
     
-    // Create basic game elements
-    this.createBackground();
-    this.createUI();
-  }
-
-  update(): void {
-    // Game update loop
-    this.updateGameObjects();
-  }
-
-  private createBackground(): void {
-    // Create a simple background
-    console.log('Creating background');
-  }
-
-  private createUI(): void {
-    // Create UI elements
-    console.log('Creating UI');
-  }
-
-  private updateGameObjects(): void {
-    // Update game objects
-    this.gameObjects.forEach(obj => {
-      if (obj.update) {
-        obj.update();
+    // Add a simple background
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0x2563eb); // Blue background
+    graphics.fillRect(0, 0, this.scale.width, this.scale.height);
+    
+    // Add title text
+    const titleText = this.add.text(
+      this.scale.width / 2, 
+      this.scale.height / 2 - 50, 
+      this.config.name, 
+      {
+        fontSize: '32px',
+        color: '#ffffff',
+        fontFamily: 'Arial'
       }
+    ).setOrigin(0.5);
+
+    // Add score text
+    const scoreText = this.add.text(
+      this.scale.width / 2, 
+      this.scale.height / 2 + 50, 
+      `Score: ${this.score}`, 
+      {
+        fontSize: '24px',
+        color: '#ffffff',
+        fontFamily: 'Arial'
+      }
+    ).setOrigin(0.5);
+
+    // Add click to increase score
+    this.input.on('pointerdown', () => {
+      this.updateScore(this.score + 10);
+      scoreText.setText(`Score: ${this.score}`);
     });
   }
 
-  protected updateScore(points: number): void {
-    this.score += points;
-    this.gameEngine.updateScore(this.score);
+  update(): void {
+    // Simple update - nothing needed for now
+  }
+
+  public updateScore(newScore: number): void {
+    this.score = newScore;
+    this.gameEngine?.updateScore?.(newScore);
+  }
+
+  public getScore(): number {
+    return this.score;
+  }
+
+  public destroy(): void {
+    console.log('Scene destroyed');
+    super.destroy();
   }
 }
+
+export default DefaultScene;

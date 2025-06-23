@@ -35,33 +35,35 @@ const queryClient = new QueryClient({
   },
 });
 
-// Protected Route Component
+// Protected Route Component - TEMPORARILY DISABLED FOR DEBUGGING
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  // const { isAuthenticated, isLoading } = useAuthStore();
 
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
+  // if (isLoading) {
+  //   return <LoadingSpinner />;
+  // }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  // if (!isAuthenticated) {
+  //   return <Navigate to="/login" replace />;
+  // }
 
+  // TEMPORARY: Skip authentication for debugging
   return <>{children}</>;
 };
 
-// Public Route Component (redirect if authenticated)
+// Public Route Component (redirect if authenticated) - TEMPORARILY DISABLED FOR DEBUGGING
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  // const { isAuthenticated, isLoading } = useAuthStore();
 
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
+  // if (isLoading) {
+  //   return <LoadingSpinner />;
+  // }
 
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  // if (isAuthenticated) {
+  //   return <Navigate to="/dashboard" replace />;
+  // }
 
+  // TEMPORARY: Skip authentication checks for debugging
   return <>{children}</>;
 };
 

@@ -1,7 +1,9 @@
+import Phaser from 'phaser';
 import { GameConfig } from '../../types';
-import { BaseScene } from '../../scenes/DefaultScene';
 
-export class UrbanRunnerScene extends BaseScene {
+export class UrbanRunnerScene extends Phaser.Scene {
+  private config: GameConfig;
+  private gameEngine: any;
   private player: any;
   private obstacles: any[] = [];
   private coins: any[] = [];
@@ -13,7 +15,9 @@ export class UrbanRunnerScene extends BaseScene {
   private isGameRunning: boolean = false;
 
   constructor(config: GameConfig, gameEngine: any) {
-    super(config, gameEngine);
+    super({ key: config.id });
+    this.config = config;
+    this.gameEngine = gameEngine;
   }
 
   preload(): void {
@@ -84,7 +88,7 @@ export class UrbanRunnerScene extends BaseScene {
   }
 
   private createPlayer(): void {
-    if (this.add?.sprite && this.physics?.add) {
+    if (this.add && this.physics) {
       this.player = this.physics.add.sprite(100, 500, 'player');
       this.player.setCollideWorldBounds(true);
       this.player.setBounce(0.2);

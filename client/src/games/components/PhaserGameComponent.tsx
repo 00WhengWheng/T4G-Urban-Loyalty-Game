@@ -35,6 +35,19 @@ export const PhaserGameComponent: React.FC<PhaserGameComponentProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if mobile on client side only
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+    
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Initialize game engine
   useEffect(() => {
@@ -258,7 +271,7 @@ export const PhaserGameComponent: React.FC<PhaserGameComponentProps> = ({
         <div
           ref={gameContainerRef}
           className="w-full bg-gray-900 rounded-lg overflow-hidden min-h-[400px] flex items-center justify-center"
-          style={{ aspectRatio: window.innerWidth < 768 ? '4/3' : '16/9' }}
+          style={{ aspectRatio: isMobile ? '4/3' : '16/9' }}
         >
           {!gameStarted && !isLoading && (
             <div className="text-center text-white">

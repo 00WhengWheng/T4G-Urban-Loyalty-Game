@@ -26,7 +26,6 @@ export interface GameConfig {
 
 export type GameType = 
   | 'urban-runner' 
-  | 'trash-collector' 
   | 'traffic-master' 
   | 'building-climber' 
   | 'bus-driver' 
