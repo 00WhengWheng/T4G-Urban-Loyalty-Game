@@ -1,76 +1,107 @@
-T4G Social Game - Urban Social Gamification Loyalty Platform
+# T4G Platform - Social Gamification Monorepo
 
-🎯 Project Purpose
-T4G Social Game revolutionizes urban exploration by transforming cities into interactive gaming environments. Our platform bridges the gap between digital engagement and physical commerce, creating a symbiotic ecosystem where users discover local businesses through gamified experiences while merchants gain valuable customer insights and increased foot traffic.
+T4G è una piattaforma di social gamification urbana dove gli utenti vincono premi reali (drink, sconti, cibo) partecipando a sfide nei locali fisici e online. 
 
-🌟 Key Functionalities
-For Urban Explorers
+## 🧱 Architettura
 
-Location-Based Gaming: Discover and interact with NFC-enabled points of interest throughout the city
-Challenge System: Participate in time-bound treasure hunts, social media campaigns, and skill-based competitions
-Social Gamification: Share achievements, compete on leaderboards, and build community connections
-Reward Ecosystem: Earn points through various activities and redeem them for real-world benefits
-Progressive Leveling: Advance through user levels with increased benefits and exclusive access
+La piattaforma è composta da un **monorepo modulare** basato su **Turborepo** e `pnpm`, con separazione dei carichi di lavoro su più backend e frontend indipendenti.
 
-For Local Merchants
+### 📦 Repository Structure
 
-Customer Engagement Tools: Create interactive campaigns and challenges to attract foot traffic
-Analytics Dashboard: Gain insights into customer behavior, preferences, and engagement patterns
-NFC Tag Management: Deploy and monitor location-based interaction points
-Reward Program Integration: Offer targeted incentives and track redemption rates
-Community Building: Foster customer loyalty through gamified experiences
+```
+/ (root)
+├── apps/
+│   ├── frontend-users/       # React + Vite: utenti, giochi, mappa, sfide
+│   ├── frontend-tenant/      # Grafana dashboard embed per i commercianti
+│   ├── frontend-mobile/      # React Native app (expo)
+│   ├── backend-user/         # NestJS: utenti, badge, sfide, giochi
+│   ├── backend-merchant/     # NestJS: gestione sfide, premi, vincitori
+│   ├── backend-admin/        # NestJS: gestione admin, merchant, logs
+├── packages/                 # Shared libs, types, utils
+├── docker-compose.yml
+├── .github/workflows/
+└── README.md
+```
 
-Core Gaming Mechanics
+## 🔧 Tecnologie Principali
 
-Quick Games: Reaction time tests, memory challenges, and skill-based mini-games
-NFC Interactions: Physical-digital bridge through Near Field Communication technology
-Geofencing: Location-verified activities ensuring authentic local engagement
-Social Sharing: Viral growth through integrated social media campaigns
-Real-Time Competition: Live leaderboards and competitive challenges
+### Backend (NestJS modulari)
+- **@nestjs/schedule**: gestione cron job (sfide, premi, leaderboard)
+- **JWT + OAuth2**: autenticazione utenti e merchant (Google/Facebook)
+- **PostgreSQL (Neon)**: database con **Row-Level Security** abilitata
+- **Redis (Upstash)**: caching, leaderboard in-memory, job queue
+- **PostHog**: analytics e eventi custom user/merchant
+- **Sentry**: monitoraggio e tracing errori
 
-🚀 Expected Outcomes
-Economic Impact
+### Frontend
+- `frontend-users`: React + Vite + Framer Motion + OpenLayers/Three.js + Phaser.js
+- `frontend-tenant`: React + Grafana embedded dashboard
+- `frontend-mobile`: React Native (Expo) con supporto NFC/QR su Android
 
-Increased Local Commerce: Drive measurable foot traffic to participating merchants
-Revenue Growth: Generate sustainable income through commission-based reward redemptions
-Market Expansion: Scale across multiple cities with localized merchant networks
+### Common Tools
+- **Turborepo**: workspace monorepo
+- **pnpm**: package manager veloce e scalabile
+- **Docker Compose**: sviluppo locale containerizzato
+- **GitHub Actions**: CI/CD per build, test e deploy automatici
+- **Cloudflare CDN/Pages**: hosting giochi, asset, immagini badge
 
-Social Benefits
+## ⚙️ Deploy & CI/CD
 
-Community Engagement: Strengthen local business-customer relationships
-Urban Discovery: Encourage exploration of diverse neighborhoods and hidden gems
-Digital-Physical Integration: Bridge online engagement with offline experiences
-Cultural Preservation: Promote local businesses and community landmarks
+### GitHub Actions Workflow
+- CI lint + test su PR
+- Build Docker per ogni backend
+- Deploy automatico:
+  - **frontend-users**: Vercel
+  - **frontend-tenant**: Vercel
+  - **frontend-mobile**: Expo EAS
+  - **backend-user**: Fly.io o Railway
+  - **backend-merchant**: Railway
+  - **backend-admin**: Fly.io
 
-Technical Excellence
+### Infrastruttura Esterna
+| Servizio        | Provider         |
+|----------------|------------------|
+| CDN giochi      | Cloudflare Pages |
+| PostgreSQL      | Neon DB          |
+| Redis           | Upstash          |
+| Analytics       | PostHog Cloud    |
+| Logging/Error   | Sentry           |
+| Dashboard dati  | Grafana Cloud    |
 
-Scalable Architecture: Support growth from local deployment to national platform
-Data-Driven Insights: Provide valuable analytics for business optimization
-Security & Privacy: Maintain user trust through robust data protection
-Performance Optimization: Deliver seamless experiences across all user touchpoints
+## 🧩 Funzionalità Core
 
-🏗️ Technical Architecture
-Backend Infrastructure
+- **Tag NFC/QR** in locale (via Web NFC / scan QR code)
+- **Giochi** semplici (quiz, reaction, puzzle) integrati via Phaser.js
+- **Sfide** pubbliche dei locali con badge e leaderboard
+- **Premi reali** con validazione e gestione vincitori
+- **Leaderboard** globale, per utente e per sfida
+- **Mappa interattiva** con challenge attivi (OpenLayers + 3D layer)
+- **Social Sharing** & badge progress
 
-NestJS/TypeScript: Robust, scalable API development with strong typing
-PostgreSQL/Prisma: Reliable data persistence with type-safe database operations
-Redis: High-performance caching and session management
-Multi-Tenant Architecture: Secure isolation for different merchant ecosystems
+## 🛠️ Dev & Run
 
-Frontend Excellence
+```bash
+pnpm install -r
+pnpm dev        # Avvia frontend + backend in modalità sviluppo
+pnpm build -r   # Builda tutto in produzione
+pnpm lint -r    # Lint dell’intero monorepo
+```
 
-React/TypeScript: Modern, responsive user interfaces with strong type safety
-Mobile-First Design: Optimized experiences for on-the-go urban exploration
-Progressive Web App: Offline capabilities and native app-like experiences
-Real-Time Updates: Live leaderboards and instant challenge notifications
+### Docker Local
+```bash
+docker-compose up --build
+```
 
-Location & Gaming Technology
+## ✅ Best Practices
+- Multi-backend per diversificazione carichi e contesto logico
+- DB con RLS per sicurezza tenant
+- Code splitting e shared packages in `packages/`
+- CI/CD modulare per deploy selettivi
+- Redis e PostgreSQL gestiti via cloud (zero-ops)
 
-Leaflet/OpenStreetMap: Interactive mapping with custom merchant overlays
-NFC Integration: Secure, proximity-based interaction verification
-Geofencing: Precise location validation for authentic engagement
-Phaser.js Games: Engaging mini-games with performance optimization
+## 📍 Note Finali
+> La piattaforma è progettata per **scalabilità orizzontale**, alta disponibilità e facilità di manutenzione in ambienti multi-tenant.
 
-🎮 Innovation in Urban Gamification
-T4G Social Game represents the next evolution in location-based entertainment, combining cutting-edge technology with human psychology to create meaningful connections between people, places, and businesses. Our platform doesn't just gamify urban exploration—it creates a sustainable ecosystem where digital engagement drives real-world economic and social value.
-The project stands as a testament to how technology can enhance community connections while providing measurable business value, setting new standards for social gamification platforms in urban environments.
+---
+
+Per richieste, apri un issue o contatta il team T4G.
